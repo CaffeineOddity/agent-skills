@@ -1,0 +1,207 @@
+# 设计系统规范
+
+> 本文件是设计系统（Design System）构建的唯一事实来源。设计系统是品牌到实现的翻译层--品牌 spec 定「用什么色/字」，本 spec 定「色和字怎么变成可复用的 Token 与组件」。
+
+## 设计目标
+
+将品牌视觉基线（`specs/brand`）翻译为可被 Web、移动端、封面等各端消费的结构化 Token 体系与组件库。核心是「一次定义，多端消费」--Token 是设计与代码的契约，组件是 Token 的具象组合，模式文档是组件的使用说明。
+
+设计系统解决三个问题：**一致性**（同一 Token 全局复用）、**效率**（改 Token 全局生效）、**可维护**（组件单一事实来源，不散落各处）。
+
+## 架构分层
+
+```
+品牌基线（specs/brand）          ← 视觉身份定义
+    ↓ 翻译
+设计系统（本 spec）               ← Token + 组件 + 模式
+    ├── Token 层                 ← 原子级变量（color/font/space/radius/shadow/motion）
+    ├── 组件层                   ← Token 组合为可复用 UI 单元
+    └── 模式层                   ← 组件组合为页面级模式
+    ↓ 消费
+各端实现（specs/web / specs/mobile / specs/cover）  ← 按 Token 构建各端界面
+```
+
+项目级覆盖见 `specs/spec-customization`，不在此处重复。
+
+## 操作流程
+
+### D1. Token 层
+
+将品牌基线翻译为原子级 Token。Token 是设计系统最小不可分单元，每个 Token 有语义名、值、用途。
+
+#### 色彩 Token
+
+三层命名：基线 -> 语义 -> 组件。
+
+```
+基线层    primary-500: #FF6B35        ← 品牌色原始值
+          gray-900: #1A1A2E
+          ↓
+语义层    color-primary: {primary-500}  ← 角色引用基线
+          color-on-primary: #FFFFFF
+          color-surface: #FFFFFF
+          color-on-surface: {gray-900}
+          color-error: #DC2626
+          ↓
+组件层    button-bg: {color-primary}   ← 组件引用语义
+          button-text: {color-on-primary}
+```
+
+- 基线层是色板（含色阶 50-900），从 `specs/brand` 的色彩体系直接映射
+- 语义层定义角色（primary/surface/error），暗色模式映射到不同基线值
+- 组件层引用语义层，禁止直接引用基线层
+- 每色须有明/暗双色映射
+
+#### 字体 Token
+
+```
+font-family-display: "Poppins"
+font-family-body: "Inter"
+font-family-label: "Inter Medium"
+
+font-size-sm: 12px / 14px / 16px / 18px / 24px / 32px / 48px
+font-weight-regular: 400
+font-weight-medium: 500
+font-weight-bold: 700
+
+line-height-tight: 1.2
+line-height-normal: 1.5
+line-height-relaxed: 1.75
+```
+
+- 字族从 `specs/brand` 的字体层级映射
+- 字号阶梯用语义名（sm/md/lg/xl/2xl），不用数字
+- 行高按用途命名（tight/normal/relaxed），不按数值
+
+#### 间距 Token
+
+```
+space-1: 4px    space-2: 8px    space-3: 12px
+space-4: 16px   space-5: 24px   space-6: 32px
+space-7: 48px   space-8: 64px
+```
+
+- 8dp 基线栅格（移动端可用 6dp，见 `specs/spec-customization` 的项目覆盖）
+- 间距只有量级名，无语义名（间距语义由组件决定）
+
+#### 圆角 / 阴影 / 动效 Token
+
+```
+radius-sm: 4px   radius-md: 8px   radius-lg: 16px   radius-full: 9999px
+
+shadow-sm: 0 1px 2px rgba(0,0,0,0.05)
+shadow-md: 0 4px 8px rgba(0,0,0,0.08)
+shadow-lg: 0 8px 24px rgba(0,0,0,0.12)
+
+motion-duration-fast: 150ms
+motion-duration-normal: 250ms
+motion-duration-slow: 400ms
+motion-easing-enter: cubic-bezier(0,0,0.2,1)
+motion-easing-exit: cubic-bezier(0.4,0,1,1)
+```
+
+- 动效 Token 引用 `specs/motion` 的时长/缓动体系，不自定义
+- 阴影分层级（sm/md/lg），组件按层级引用
+
+### D2. Token 导出格式
+
+Token 须可被各端消费。一份 Token 源，多端格式导出：
+
+| 消费端 | 格式 | 用途 |
+|--------|------|------|
+| Web | CSS 自定义属性 / Tailwind config | `--color-primary: #FF6B35` |
+| iOS | Swift 主题配置 | `Color.primary` |
+| Android | XML 主题 / Compose 主题 | `<color name="primary">#FF6B35</color>` |
+| 鸿蒙 | 主题资源文件 | 按鸿蒙规范 |
+| 通用 | JSON（style.json） | 各端中间层 |
+| 可视化预览 | 可审阅 HTML | Token 文档 HTML，实时渲染预览（见下） |
+
+- Token 源文件为单一事实来源（如 `tokens.json`），各端格式由构建工具自动导出
+- 禁止手动在各端重复维护 Token 值（DRY）
+- 导出后各端只消费，不修改
+
+**Token 文档 HTML**：Token 体系可视化为单页 HTML，供设计师与用户审阅：
+
+- 色彩 Token 三层可视化（基线色板 -> 语义角色 -> 组件引用对比）
+- 字体 Token 实际渲染预览（字族/字号/字重/行高，用该字体渲染文字）
+- 间距 Token 可视化标尺（8dp 栅格 + 各档位对比）
+- 圆角/阴影 Token 实际效果对比
+- 动效 Token 引用 `specs/motion`
+- 组件预览区（Button/Card/Modal 各变体各状态实时渲染）
+- 导出区（下载 tokens.json / CSS 变量 / Swift 主题）
+- 弹出式审阅（见 `specs/review`）：每区块有 [+] 按钮，点击弹窗写反馈 + 快捷标记，支持导出给 AI 修改
+
+在 workflow 中，Token 文档 HTML 是 Phase 3 的产出之一（见 `specs/workflow` 的 Phase 3）。
+
+### D3. 组件层
+
+Token 组合为可复用 UI 组件。每个组件定义：
+
+| 属性 | 说明 |
+|------|------|
+| 语义 | 这个组件是什么、解决什么问题 |
+| Token 引用 | 引用哪些 Token（色彩/字体/间距/动效） |
+| 变体 | 有哪些变体（如按钮 filled/outlined/text） |
+| 尺寸 | sm/md/lg |
+| 状态 | default/hover/focus/active/disabled |
+| 属性 | 可传入的参数（如 icon、loading） |
+| 交互 | 动效引用 `specs/motion` |
+| 无障碍 | 见各端 spec 的无障碍章节 |
+
+组件设计原则：
+
+- 组件引用语义 Token，不硬编码值（如 `background: {color-primary}` 而非 `#FF6B35`）
+- 变体用属性控制，不用复制组件
+- 状态用 Token 层叠，不用重新定义
+- 组件单一事实来源，各端各实现但接口一致
+
+### D4. 组件清单
+
+设计系统须维护组件清单，按成熟度分级：
+
+| 层级 | 说明 | 示例 |
+|------|------|------|
+| 原子 | 不可再分的基础元素 | Button、Input、Icon、Text |
+| 分子 | 原子组合的单元 | SearchBar（Input+Icon）、FormField（Label+Input+Error） |
+| 有机体 | 分子组合的区块 | Header、Card、Modal |
+| 模板 | 有机体组合的页面骨架 | DashboardLayout、AuthPage |
+
+清单记录每个组件的：名称、层级、Token 依赖、变体数、成熟度（draft/stable/deprecated）。
+
+### D5. 模式层
+
+组件组合为页面级模式。模式不是组件，是组件的编排规则：
+
+- 表单模式：Label 上方 + Input + Helper + Error
+- 列表模式：卡片列表 + 分页/无限滚动 + 空状态
+- 导航模式：顶栏 + 侧栏 + 面包屑
+- 详情模式：头部信息 + 内容区 + 操作栏
+
+模式文档用截图 + 组件组合说明，不复述组件本身（引用 D3/D4）。
+
+### D6. 文档与维护
+
+- 组件文档：每个组件一张文档，含示例、属性表、变体对比、Token 引用、使用禁忌
+- Token 文档：Token 清单表，含名称、值、语义、消费端导出格式
+- 变更日志：Token/组件变更记录（遵循 SDD，spec 先改再改实现）
+- 成熟度标签：draft（实验）/ stable（可用）/ deprecated（废弃但保留）
+
+## 验收标准
+
+- [ ] Token 三层命名（基线 -> 语义 -> 组件）已定义
+- [ ] 组件层引用语义 Token，无裸值硬编码
+- [ ] Token 源为单一文件，各端格式自动导出
+- [ ] 暗色模式每色有明/暗双映射
+- [ ] 组件清单含层级、Token 依赖、变体数、成熟度
+- [ ] 每个组件有状态变体（default/hover/focus/active/disabled）
+- [ ] 动效 Token 引用 `specs/motion`，不自定义
+- [ ] 模式层文档引用组件，不复述
+- [ ] 变更遵循 SDD：先改 spec/Token 再改组件实现
+
+## 边界与不做项
+
+- 不定义品牌视觉身份（色彩/字体的源头选择见 `specs/brand`）
+- 不定义各端平台规范（iOS HIG / Material / 鸿蒙见 `specs/mobile`）
+- 不定义动效原则与时长体系（见 `specs/motion`）
+- 项目级 Token 覆盖见 `specs/spec-customization`
+- 各端代码实现（CSS/SwiftUI/Compose）由开发负责，本规范止于 Token 与组件设计

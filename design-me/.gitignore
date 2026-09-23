@@ -1,0 +1,6 @@
+# 敏感配置不上传
+config/.env
+
+# Python 缓存
+scripts/__pycache__/
+*.pyc
