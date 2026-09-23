@@ -1,6 +1,6 @@
 # 专业设计师高保真 UI 的验收方法与工作纪律
 
-> 供 design-me Phase 4 高保真阶段对齐。核对源：`huashu-design/references/verification.md`、`huashu-design/references/critique-guide.md`、`huashu-design/SKILL.md`（核心哲学 + 工作流 Step 3 form 推导五问 + App/iOS 专属守则）。与 `design-workflow.md` Phase 4「步骤 4.2 动态质感质量闸门」互相补充、不冲突。
+> 供 design-me Phase 4 高保真阶段对齐使用：反 AI slop 明细、排印与可读性底线、form 推导五问（从内容长设计）、5 维度专业评审（Keep / Fix / Quick Wins）、Playwright 验证方法、工作纪律。与 `design-workflow.md` Phase 4「步骤 4.2 动态质感质量闸门」互相补充、不冲突。
 
 ## 1. 验证方法（Playwright 截图 / 控制台 / 人工验收）
 
@@ -9,7 +9,7 @@
 - 必须用 Playwright headless chromium 打开每个高保真 HTML：截图到项目目录 + 抓取控制台错误。
 - 必须要求控制台 `pageerror` 为 0（JS 报错是白屏主因，非 0 不交付），App/iOS 原型交付前同理跑点击测试 `pageerror` 为 0。
 - 必须交付前自己肉眼过一遍浏览器，且打开真实浏览器（`--show` / headless=false）看交互效果，不只信静态截图；这次肉眼是最后一道「第二双眼」闸门。
-- 必须做多 viewport 截图：`1920x1080,1440x900,768x1024,375x667`（Web/App 各端范围按目标设备选），宽屏/窄屏各有截图，响应式页三档都验。
+- 必须做多 viewport 截图：`1920x1080,1440x900,768x1024,375x667`（Web/App 各端范围按目标设备选），宽屏/窄屏各有截图，响应式页三档都验。**按产物形态选档**：响应式 Web 页三档全验；固定画布 App 原型验目标设备尺寸 + 一档宽屏（确认容器居中不破即可，不按响应式标准要求）。
 - 必须按页面逐一截图（每页一图，Deck 类逐页截），如实呈现交付形态，不是只截首屏。
 - 必须等待动画 settle 再截图（`page.wait_for_timeout(2000)`），防止截到中间态；动画优先 `transform`/`opacity`（GPU 加速），卡顿用 DevTools Performance 找 layout thrashing。
 - 必须用 `device_scale_factor=2` 出 retina 高清截图，避免糊片掩盖像素级问题。
@@ -67,6 +67,8 @@
 - 必须先对齐假设再动手：开工把 assumptions + reasoning + placeholders 写进产物开头、尽早给用户看，确认方向后再填实；理解错早改比晚改便宜 100 倍。
 - 必须反 AI slop：无通用紫渐变、无逐处 emoji 图标、无圆角卡片+左 border accent 滥堆、无 SVG 手画人脸；判断边界「品牌本身用是唯一合法破例」；禁的是「均匀深蓝 `#0D1117`+霓虹 glow」而非一切暗色。
 - 必须守住可读性硬底线（任何安静风格不豁免）：正文 ≥14px、标签/注释 ≥12px、正文对比度 ≥4.5:1；留白必须是构图（首屏有视觉锚点），不是内容缺席。
+- 必须做信息密度分型：默认克制型（少一层容器/少一个 border/少一个装饰 icon）；但产品核心卖点是 AI 智能/数据可视化/上下文感知（Dashboard、Tracker、Copilot、记账、健康监测类）时走**高密度型**——每屏 ≥3 处**有内容的**差异化信息，装饰性 icon 照样忌讳。加的是有内容的密度，不是装饰；安静派做过头（大片死白+微缩字号）= 第一眼像页面渲染坏了。
+- 可交互演示的资产可靠性：交付形态为「双击就能开」的单文件 HTML 时，图片/logo 须 base64 内嵌，相对路径资源挪目录即裂图；交付前用 Playwright 验证无裂图（逐 `<img>` `naturalWidth>0`，或断言 console/request 无资源 404）——**裂图不抛 pageerror，是静默失败**，只查 pageerror 查不出来。
 
 ## 6. 内嵌到 Phase 4 高保真的工作纪律
 

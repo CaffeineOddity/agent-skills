@@ -5,11 +5,13 @@ description: 跨端设计能力中心，覆盖设计研究与竞品分析、Web 
 
 # Design - 跨端设计能力中心
 
-一站式设计 Skill。设计能力按领域分层，每个领域有独立 spec 作为该领域的唯一事实来源（single source of truth）。本文件负责需求分流与流程编排，具体规范、操作流程与验收标准在各 spec 中。
+一站式设计 Skill。设计能力按领域分层，每个领域独立 spec 作为唯一事实来源；本文件负责需求分流与流程编排，规范/操作/验收在各 spec。
 
-遵循项目 SDD 规则：spec 与产出始终一致，spec 是活文档，先改 spec 再改产出。
+遵循项目 SDD：spec 与产出始终一致，spec 是活文档，先改 spec 再改产出。
 
 ## 何时使用
+
+改动「看起来怎样 / 用起来怎样 / 品牌表达怎样 / 动起来怎样 / 文案怎么写」即触发（用户未必说「设计」二字）。按场景路由：
 
 | 场景 | 触发示例 | 路由到 |
 |------|---------|--------|
@@ -25,21 +27,22 @@ description: 跨端设计能力中心，覆盖设计研究与竞品分析、Web 
 | 内容设计/文案 | 「按钮文案怎么写」「错误提示文案」「空状态文案」 | specs/content |
 | 设计研究/竞品 | 「竞品分析」「设计研究」「moodboard」「找参考」 | specs/research |
 | 标注/切图/交付 | 「出标注文档」「交付给开发」「走查清单」 | specs/handoff |
-| 页面描述/低保真 | 「出页面描述」「写页面描述文档」「出低保真线框」「画线框图」「信息架构」 | specs/workflow |
+| 页面描述/低保真 | 「出页面描述」「写页面描述文档」「出低保真线框」「画线框图」 | specs/workflow |
 | 页面走查/审阅 | 「页面走查」「审查页面」「低保真审阅」「反馈收集」 | specs/review |
 | 设计流程编排 | 「从 PRD 到设计」「完整设计流程」「设计到交付流程」 | specs/workflow |
 | 规范定制/覆盖 | 「定制项目设计规范」「覆盖默认色彩」 | specs/spec-customization |
 | 跨端一致性 | 「Web 和移动端风格统一」 | 先 specs/brand，再 specs/web + specs/mobile |
 
-**判断准则**：任务会改变产品「看起来怎样、用起来怎样、品牌表达怎样」 -> 使用此 Skill。
-
 ## 能力总览
+
+specs 结构见下方代码块；每个 spec 统一结构：设计目标 → 操作流程 → 规范要求 → 验收标准 → 边界与不做项。
 
 ```
 design/
 ├── SKILL.md                    ← 你在这里：流程编排与路由
 ├── scripts/
-│   └── toapis.py               ← AI 图像/视频生成封装（接入 ToAPIs）
+│   ├── toapis.py               ← AI 图像/视频生成封装（接入 ToAPIs）
+│   └── validate.mjs            ← 仓库一致性校验（改完 spec/SKILL.md 必跑，见「仓库一致性校验」）
 ├── config/
 │   └── .env                    ← API Key 配置（不上传，见 .gitignore）
 └── specs/
@@ -57,7 +60,8 @@ design/
     ├── design-system/          ← 设计系统（Token 架构 + 组件库 + 模式）
     │   └── design-system.md
     ├── motion/                 ← 动效系统（跨端统一动效语言）
-    │   └── motion-design.md
+    │   ├── motion-design.md
+    │   └── motion-audio-rules.md   ← 动效与声音进阶细则（easing 语义名 / orchestration / SFX 工程）
     ├── illustration/           ← 插画系统（空状态/引导/错误/加载/文章配图）
     │   └── illustration-design.md
     ├── icon-system/            ← 图标系统（跨端设计基线 + 平台深潜）
@@ -75,85 +79,40 @@ design/
     ├── handoff/                ← 设计交付（标注/切图/Token/走查）
     │   └── handoff-design.md
     ├── workflow/               ← 设计流程编排（PRD -> 低保真 -> 品牌 -> 高保真 -> 交付）
-    │   └── design-workflow.md
+    │   ├── design-workflow.md
+    │   └── hi-fi-acceptance-checklist.md   ← 高保真验收（反 slop / 排印 / form 推导五问 / 5 维度评审 / 验证方法）
     ├── review/                 ← 审阅反馈机制（可审阅 HTML + 反馈收集 + 导出）
     │   └── review-design.md
     └── spec-customization/     ← 规范定制与项目级覆盖
         └── spec-customization.md
 ```
 
-每个 spec 遵循统一结构：设计目标 → 操作流程 → 规范要求 → 验收标准 → 边界与不做项。
-
 ## 统一设计流程
 
-不论路由到哪个能力，都遵循以下五步。前四步是「理解 → 加载 → 确认 → 执行」，第五步是交付前的硬性闸门。
+不论路由到哪个能力，遵循五步：理解 → 加载 → 确认 → 执行 → 验收。前四步是「理解 → 加载 → 确认 → 执行」，第五步是交付前硬闸门。
 
-> 若任务是从 PRD 开始的完整设计流程（研究 → 页面描述 → 低保真 → IP/设计规范 → 高保真 → 交付），先读 `specs/workflow/design-workflow.md`，那里定义了 Phase 1-6 的完整流程主线与收敛检查点。设计研究（竞品分析/moodboard）是 Phase 0，见 `specs/research`。本节五步是单次设计任务的通用流程，workflow spec 是项目级流程编排。
+> 完整 PRD→交付流程（研究 / 页面描述 / 低保真 / IP / 高保真 / 交付）见 `specs/workflow/design-workflow.md`（Phase 1-6）；研究是 Phase 0 见 `specs/research`。本节五步是单次任务的通用流程。
 
-### 1. 需求解构
+1. **需求解构**：提取 产品类型 / 目标用户 / 风格关键词 / 技术约束 / 目标平台；缺失即追问，不凭空假设。
+2. **规范加载**：按路由表读对应 spec；涉及品牌/跨端先读 `specs/brand` 建基线（色彩/字体/基调），品牌是跨端锚点。
+3. **方向确认**：基于 spec 风格给 1-2 个方向（含色彩基调、字体配对），与用户确认再执行——方向未定直接出成品是最大返工源。
+4. **设计执行**：按 spec 逐步执行，每步产出可审阅中间件（品牌层色板/字体层级、页面层信息架构/线框/高保真、组件层变体/标注、资源层切图/Token）。
+5. **验收对齐**：执行该 spec 验收清单逐项核对，未通过项修正再交付；验收是硬闸门非可选。
 
-从用户请求中提取五个维度：
-
-- **产品类型**：工具 / 社交 / 电商 / 内容 / 生产力 / 混合
-- **目标用户**：C 端消费者（年龄、场景）或 B 端专业用户
-- **风格关键词**：极简 / 玻璃拟态 / 暗色 / 暖色 / 科技感 / 等
-- **技术约束**：框架、性能要求、无障碍等级
-- **目标平台**：Web / iOS / Android / 鸿蒙 / 多端
-
-维度缺失时主动追问，不要凭空假设。
-
-### 2. 规范加载
-
-按下文路由表读取对应 spec，加载该领域的设计目标、操作流程与验收标准。
-
-若用户提及品牌一致性或跨端统一，先读 `specs/brand` 建立品牌基线（色彩、字体、风格基调），再读各端 spec。品牌 spec 是跨端一致性的锚点。
-
-### 3. 方向确认
-
-基于 spec 的风格指引，提出 1-2 个设计方向（含色彩基调、字体配对、风格方向），与用户确认后再执行。
-
-方向未定时直接产出成品是最大的返工来源——先花一轮对齐方向，后续执行才有靶心。
-
-### 4. 设计执行
-
-按 spec 中的操作流程逐步执行。每一步产出可验证的中间件：
-
-- 品牌层：色板、字体层级表、Logo 安全空间图
-- 页面层：信息架构、线框、高保真稿
-- 组件层：组件稿、状态变体、标注
-- 资源层：切图包、样式 Token
-
-中间件可被用户中途审阅，避免一路做到底才发现偏离。
-
-### 4b. 图像/视频生成（Phase 3-5 必须执行）
-
-Phase 3-5 须使用 `scripts/toapis.py` 生成真实素材，不得用 emoji 或 CSS 占位符替代。各 Phase 的素材生成要求见 `specs/workflow` 对应步骤。
-
-**生成前必须先写 Prompt 文件（`xxx_prompt.md`）**：凡出设计效果图（图标、icon、UI、IP 形象、封面、插画、品牌素材等），先生成存到 `design/output/prompts/<素材类型>/` 下的 `<素材名>_prompt.md`（结构模板、品牌基线绑定、`--ref`、负面词、验收见 `specs/image-prompt/image-prompt-design.md`），审阅确认后再把该 prompt 交给 toapis 生成。禁止在命令行 `--prompt "..."` 里即兴写、跳过 prompt 文件。
+Phase 3-5 须用 `scripts/toapis.py` 生成真实素材，禁 emoji/CSS 占位。生成前**必须先写 Prompt 文件** `design/output/prompts/<类型>/<素材名>_prompt.md`（结构/品牌绑定/`--ref`/负面词见 `specs/image-prompt`），审阅确认再交给 toapis；禁命令行 `--prompt` 即兴写。
 
 ```bash
-# 0) 先生成 prompt 文件（顺带调 toapis 模型的正确写法）
-# 写 design/output/prompts/brand/ip_base_prompt.md（结构见 specs/image-prompt），然后：
+# 先写 prompt 文件，再：
 python3 scripts/toapis.py image --model gpt-image-2 --prompt "$(cat design/output/prompts/brand/ip_base_prompt.md)" --background transparent --save design/output/assets/brand/ip_base.png
-
-# 列出可用模型
-python3 scripts/toapis.py models
-
-# 生成视频（如动效预览、品牌片头），同样先写 xxx_prompt.md
-python3 scripts/toapis.py video --model veo3.1-fast --prompt "..." --aspect-ratio 16:9 --save design/output/intro.mp4
-
-# 上传参考图后做图生图（--ref 场景，prompt 只写变体差异）
-python3 scripts/toapis.py upload --file ./reference.jpg
-python3 scripts/toapis.py image --model gpt-image-2 --prompt "改为赛博朋克风格" --ref https://files.toapis.com/xxx.jpg
+python3 scripts/toapis.py models                 # 列可用模型
+python3 scripts/toapis.py video --model veo3.1-fast --prompt "$(cat ..._prompt.md)" --aspect-ratio 16:9 --save design/output/intro.mp4
+python3 scripts/toapis.py upload --file ./ref.jpg   # 上传参考图后图生图
+python3 scripts/toapis.py image --model gpt-image-2 --prompt "改为赛博朋克" --ref https://files.toapis.com/xxx.jpg
 ```
 
-素材存入 `design/output/assets/` 目录，以 `<img>` 嵌入 HTML。API Key 在 `config/.env` 配置（不上传）。生成结果 URL 有效期 24 小时，须用 `--save` 及时下载。各 spec 的验收标准仍须逐项核对，AI 生成素材不豁免验收。生成结果不理想先改 `xxx_prompt.md` 再生成，不在生成后反复改图。
+素材入 `design/output/assets/` 以 `<img>` 嵌入。API Key 在 `config/.env`。生成 URL 有效期 24h，`--save` 及时下载。AI 素材不豁免验收；不理想先改 `xxx_prompt.md` 再生成，不反复改图。
 
-Phase 2 起凡生成可审阅 HTML，保存反馈功能必须包含 FSAA 写入主路径（`showDirectoryPicker` + IndexedDB 句柄复用）+ Blob 下载降级，缺 FSAA 只做 Blob 下载视为验收不通过；生成前对照 `specs/review/review-design.md` 的「FSAA 参考实现」与验收清单。
-
-### 5. 验收对齐
-
-执行对应 spec 的验收清单，逐项核对。未通过项修正后再交付。验收清单是该领域的硬性闸门，不是可选建议。
+Phase 2 起凡生成可审阅 HTML，保存反馈须 FSAA 写入主路径（`showDirectoryPicker` + IndexedDB 句柄复用）+ Blob 下载降级，缺 FSAA 只做 Blob 下载=验收不通过；生成前对照 `specs/review/review-design.md` 的 FSAA 参考实现与验收清单。
 
 ## 路由表
 
@@ -175,25 +134,80 @@ Phase 2 起凡生成可审阅 HTML，保存反馈功能必须包含 FSAA 写入�
 | 标注、切图、交付、走查、还原度、设计交付、设计走查 | `specs/handoff/handoff-design.md` |
 | 低保真、线框图、页面描述、信息架构、PRD 到设计、设计流程、页面描述文档、页面清单、交付包 | `specs/workflow/design-workflow.md` |
 | 页面走查、审阅、反馈收集、走查页面、快捷标记、反馈导出、可审阅 HTML | `specs/review/review-design.md` |
+| 高保真验收、反 AI slop、排印底线、form 推导五问、5 维度评审、验证方法 | `specs/workflow/hi-fi-acceptance-checklist.md` |
+| 动效/声音进阶（OR：easing 语义名、orchestration、Signal 克制、SFX 工程密度） | `specs/motion/motion-audio-rules.md` |
 | 定制规范、覆盖规范、项目规范、设计 Token、master/override | `specs/spec-customization/spec-customization.md` |
 
 ## 跨端项目协调
 
-当同一品牌需多端产出时（如品牌 Logo + Web 官网 + 移动端 App）：
+同一品牌多端产出时：
 
-1. 先读 `specs/brand` → 确立品牌基线（Logo、色彩、字体、辅助图形、IP）
-2. 将品牌基线作为设计 Token 注入各端
-3. 分别读 `specs/web` 与 `specs/mobile`，按各端平台规范执行
-4. 各端产出须通过各自验收清单 + 品牌一致性复核
+1. 先读 `specs/brand` 确立品牌基线（Logo/色彩/字体/辅助图形/IP）
+2. 品牌基线作 Token 注入各端 → 3. 各端按 `specs/web`/`specs/mobile` 平台规范执行 → 4. 各端过各自验收 + 品牌一致性复核
 
-品牌 spec 是跨端一致性的唯一锚点。各端平台规范（如 iOS HIG、Material、Web 响应式）是各端可用性的底线。二者不矛盾：品牌定调，平台定规。
+品牌定调、平台定规：品牌 spec 是跨端唯一锚点，各端平台规范（iOS HIG / Material / Web 响应式）是可用性底线，二者不矛盾。
 
-## 规范演进
+## 规范演进（SDD）
 
-spec 是活文档，遵循项目 SDD 规则：
+spec 是唯一事实来源、活文档，先改 spec 再改产出：
 
 - **新增设计能力** → 先写/更新对应 spec，再执行
-- **调整设计要求** → 先改 spec，再改产出，使产出贴合更新后的 spec
-- **spec 与产出矛盾** → 以 spec 为准修正产出；若 spec 本身有误则先修 spec 再改产出，二者不得长期背离
+- **调整设计要求** → 先改 spec，再改产出，三者不得长期背离（spec/产出矛盾：以 spec 为准修正产出；spec 有误先修 spec）
+- **项目级覆盖**（不改全局 spec）→ `specs/spec-customization`（master + override，多项目共用基线各差异场景）
 
-规范定制能力（`specs/spec-customization`）描述如何在不修改全局 spec 的前提下，做项目级覆盖（master + overrides 模式），适用于多项目共用同一套设计基线但各有差异的场景。
+## 仓库一致性校验（脚本强化的护栏）
+
+改完任何 spec / SKILL.md 后，运行 `node scripts/validate.mjs`。把人工护栏转成可执行约束，失败以非零码退出，应在 spec 变更日志追记触发：
+
+- 无对外部 skill 的来源命名残留（不自称对标外部 skill）
+- `specs/` 根下不散落独立 md（细则归子目录）
+- SKILL.md 路由/能力树覆盖全部 spec
+- 主 spec 有「设计目标 + 验收/边界/收敛 之一」
+- spec 内部相对引用存在
+
+当一条规则「文字写不清、产物总踩」时，优先把它做成生成器/校验脚本，而不是在 spec 里加更长说明（脚本化 > 措辞堆叠）。
+
+## 验证推进路线图
+
+能力域全量回归的**唯一推进过程真源**是 `../design/regression/ROADMAP.md`（15 域状态机 + 光标）。自进化任务与挑刺专家任务都以它为准推进、写回状态；两任务各跑一个阶段配合：
+
+```mermaid
+stateDiagram-v2
+    [*] --> 未验证: 自进化产出+自检通过
+    未验证 --> 自进化趋稳: 挑刺从零重产通过
+    自进化趋稳 --> 终验通过
+    自进化趋稳 --> 未验证: 挑刺残留缺陷
+```
+
+```
+自进化任务 (0 8 * * *)             挑刺专家任务 (*/10 * * * *)
+  读 ROADMAP「下一个」⬜域             读 ROADMAP 最近 ✅ 域
+  ── 从零产出 + 对照 spec 自检 ──►    从零重产终验（clean-room）
+  ── 回填升级 spec ───────────►  挑刺暴露 → 驱动 spec 升级
+  状态 ⬜→✅                           状态 ✅→🛡️（或打回 ⬜）
+  推进光标                            写报告 critic-reports/latest.md
+```
+
+- 状态机：`⬜ 未验证 → ✅ 自进化趋稳 → 🛡️ 终验通过`；失败/残留回 `⬜`，光标停住。
+- 完工门：15 域全 `🛡️` → 进入稳定期·周巡检，只在 spec 变更时重验受影响域。
+
+## spec 变更日志
+
+记录每轮被「交付产物 / 挑刺终验」暴露出的 spec 短板，及对应 spec 回填/升级，供后续轮次不重复修、可回溯。（由 `design-me 自进化 · 按路线图逐域推进验证` 与 `design-me 挑刺专家` cron 任务维护；无 spec 变更的轮次记「本轮无 spec 变更」。）
+
+| 日期 | 能力域 | 产物暴露的短板 | spec 改动文件 | 根因与改法 |
+|------|--------|--------------|--------------|-----------|
+| 2026-09-27 | motion | 「退场快 60-70%」与时长 Token 下限冲突（.3s 入场的 65% 快=105ms 贴 fast 下限，硬取比例反不自然） | `specs/motion/motion-design.md` | 规则缺冲突仲裁；补「比例与 Token 下限冲突时以 Token 下限为准」 |
+| 2026-09-27 | motion | 「单条 paused timeline orchestrated」默认 GSAP，纯 CSS/无框架产物无从执行该验收 | `specs/motion/motion-design.md` | 规则绑定特定实现；补「无框架等价判定：统一动画序列+delay 链、一处可整体移调」 |
+| 2026-09-27 | motion | 「素材库全站统一 assets/sfx/」与无外部依赖单文件原型冲突，合成占位是否合规无约定 | `specs/motion/motion-design.md` | 补「WebAudio 合成占位可，但须显式标注『合成占位，正式音源待补』」 |
+| 2026-09-27 | brand | 「视觉偏差 <5%」无度量对象与方法，验收不可执行（产物只能自申报） | `specs/brand/brand-design.md` | 验收含混；补可执行定义「同角色取值与色板/Token 逐项 diff，不一致项 ≤5%，不做像素比对」 |
+| 2026-09-27 | brand | 「Logo 转曲」判定未区分交付级源文件与审阅 HTML 展示层 | `specs/brand/brand-design.md` | 判定对象含混；明确「交付级 Logo 源文件须纯 path，审阅 HTML 的 text 标注不在此限」 |
+| 2026-09-27 | brand | B6「IP 可选」与验收清单条件冲突，不做时产物易被当缺项 | `specs/brand/brand-design.md` | 可选能力缺声明规则；补「显式 N/A 区块（范围+原因），留空=不通过」 |
+| 2026-09-27 | web | 「触控目标 ≥44px」只写在验收清单，W2-W5 流程无提醒，产物 nav CTA 首测 36px 才发现（验收才发现、流程不设防） | `specs/web/web-design.md` | 规则位置错误；W2 正文补触控目标规则（含扩展命中区写法），验收项注明 |
+| 2026-09-27 | web | 暗色模式验收项二义：不做暗色算通过还是不通过未定义（W3 有「不想做就别做」但验收未接） | `specs/web/web-design.md` | 条款衔接缺失；验收补「不提供暗色须显式声明仅亮色，隐式缺失=不通过」 |
+| 2026-09-27 | web | 「诚实 placeholder」未定标注形式（可见 or 注释），产物自行选可见灰字 | `specs/web/web-design.md` | 规则含混；明确「面向用户的未定数据须可见标注『数据待补：xx』，不可藏注释」 |
+| 2026-09-27 | 全域 | 用户指令「删掉所有旧产物重新开始」：`design/regression/` 下 12 个域产物目录已删除，ROADMAP 状态表全部重置为 ⬜，光标归位 workflow。spec 变更日志保留（spec 升级本身不随产物作废） | 无（产物清理） | 过程性产物作废重来；spec 演进累积保留 |
+| 2026-09-27 | workflow | 「不得用 emoji/CSS 占位符替代真实素材」与 toapis 不可用/跳过字面冲突，流程死锁；正确期望是诚实降级但 spec 无此路径 | `specs/workflow/design-workflow.md` | 降级路径缺失；补「toapis 跳过时：标注待生成 + prompts/ 先行 + 母题占位 + 替换指引；禁假装已生成」 |
+| 2026-09-27 | workflow | 「审阅反馈全部清空」在回归/自动化单人场景无法等效（自审阅秒收敛，检查点虚设） | `specs/workflow/design-workflow.md`（4 处收敛条件） | 场景适配缺失；补「无真人审阅时等效自检：逐项对照收敛条件 + SELF-CHECK.md + 脚本校验」 |
+| 2026-09-27 | workflow | 多 viewport 验收对固定画布 App 原型过度要求（768/1440 只是容器居中） | `specs/workflow/hi-fi-acceptance-checklist.md` | 档位未分形态；补「响应式三档全验；App 固定画布验目标尺寸+一档宽屏不破」 |
+| 2026-09-24 | workflow | 挑刺终验暴露：静音开关只写在 spec 未定义验证对象（产物页面内无可操作控件，自检虚报 ✅）；页面描述声明态（骨架屏）hi-fi 静默缺失；`transition:all` 与无框架入场 orchestration 无自检可查；模态无 Esc 逃逸、错误行无 role=alert；同屏字号档位无约束 | `specs/workflow/design-workflow.md`（4.2 自检项回填六条） | 验证对象/覆盖面含混；明确「静音开关须原型内可操作」「声明态须有落点或标注未实现原因」「禁 transition:all 逐属性声明」「入场单序列编排（含无框架等价）」「Esc 关模态 + 错误行 role=alert」「同屏字号档位下限」，报告见 design/critic-reports/latest.md |

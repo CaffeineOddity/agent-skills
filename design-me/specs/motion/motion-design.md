@@ -34,7 +34,7 @@
 | duration-slower | 400-500ms | 全屏转场、大型内容替换（上限） |
 
 - 禁超 500ms，超过则用户感知为卡顿
-- 退场比入场快约 60-70%（退场是确认已完成的操作，不需拖沓）
+- 退场比入场快约 60-70%（退场是确认已完成的操作，不需拖沓）；**比例与时长 Token 下限冲突时以 Token 下限为准**（如入场 .3s 的 65% 快 = ~105ms，取 duration-fast 区间下限，不追求精确比例）
 - 列表错峰入场 30-50ms/项
 
 ### 缓动 Token
@@ -49,6 +49,15 @@
 - 禁用 `linear`，匀速动效不自然
 - iOS 优先弹簧曲线（spring physics），Android 用 Material Motion 曲线
 - 缓动 Token 各端实现方式不同，但曲线语义一致
+
+**进阶：语义 easing 名映射**（对标专业动效，任意动效须落在这些语义上）
+
+- **`expoOut`**（≈`cubic-bezier(0.16, 1, 0.3, 1)`）—默认主 easing，入场一律 expoOut（比 easeOut 更快起步、更稳停），替代默认的 easeOut
+- **`overshoot`**（≈`cubic-bezier(0.34, 1.56, 0.64, 1)` / back.out）—Toggle 切换、按钮弹出、强调交互
+- **`spring`**（≈elastic.out）—几何体归位、物理落位、UI 抖弹
+- 入场一律 `expoOut`，出场一律 `easeIn`，持续对称运动（鼠标轨迹插值）用 `easeInOut`
+- 语义名 → 铜线值一次映射到实现端，spec 只写语义名不散落数值（DRY）
+- 越 0 的 easing（anticipation 先反向下探、spring 过冲）**只能用在 transform（y/scale/rotation）**，禁用在 opacity / 颜色（会推出合法范围）
 
 ### 属性 Token
 
@@ -101,6 +110,32 @@
 - 下拉刷新：阻尼随下拉距离增大，松手回弹或触发刷新
 - 视差效果克制使用，尊重 reduced-motion，不致眩晕
 
+## 进阶编排（对标专业动效）
+
+### Orchestration：编排而非散落各自一闪
+
+- 页面进入的多个元素由**同一条 paused timeline 编排**（`defaults: { ease:"expo.out", duration:0.6 }` + 分元素 stagger），共享一个节奏中心，不是每个元素各自独立闪
+- **无框架（纯 CSS/原生 JS）产物的等价判定**：同一场景的入场动画共享一个统一的动画序列与 delay 链（CSS animation + delay 序列 / JS setTimeout 链），一处改动可整体移调节奏，即视为「单条 timeline」；逐元素各写各的 keyframe+独立时长则不合规
+- 列表/卡片/行入场用 **30ms stagger**（可 `from:"center"` 向两侧涌现）
+- scene 间全屏切换用 `autoAlpha` 交叠 + 位移（cross-fade），**禁用 `display` / 裸 `visibility`** 切换（渲染器禁区，show/hide 用 autoAlpha）
+- 连续场景切换的 fade out / fade in 交叉重叠，**禁 >0.3s 的纯空白画面**（观众以为卡住）
+- 长段节奏分三层：微交互 0.1-0.3s / UI 过渡 0.3-0.8s / 叙事段 2-10s；单段叙事 ≤10s，关键结果出现前**悬停 0.5s**
+- 关键结果**戛然而止 + hold 最后一帧**，禁 fade to black / 渐弱收尾
+
+### 状态变化：一个元素过渡，非两个元素 cross-fade
+
+- 同一元素跨状态用 **Shared Element / FLIP**（如按钮「膨胀」成输入框），不是两个元素交叉淡入淡出
+- 面板/卡片展开用「呼吸式」：前 40% 只拉 width，30% 处起撑 height，内容在壳展开完成后才浮现；勿同时拉宽高
+- 焦点切换完整配方：背景减弱（`brightness + saturate + blur(4-8px) + dim`）+ 前景锐化 + 150ms Flash；**blur 才让非焦点真的退到后景**，不只降 opacity
+- 展示「过程」而非「魔法结果」：AI 文本用 Chunk Reveal（按词/标点切块、40-120ms）、数据用数字 counter（snap 整数），反「一键魔法」
+
+### Signal 非装饰：克制与信息性
+
+- 动效是 **signal 不是装饰**——只 fade 强调重要的；什么都 fade 则 signal 失效
+- 区分**信息性 cue**（P0：打字 / 点击 / 焦点 / Logo reveal，省略有违和）与**装饰性微交互**（P2：hover / 进度 tick / 环境动效，多了会乱）
+- 画面内「伪 chrome」装饰（进度条 / 时间码 / 署名条 / 章节计数）属 filler slop，能删则删
+- 全片只有一处「120% 精致」，其余恰到好处；到处炫技是廉价信号
+
 ## 各端差异补充
 
 动效 Token 在各端的实现差异：
@@ -144,6 +179,10 @@
 - 声音都是**短促、一次性的结果反馈**，不是循环 BGM/音频流
 - 音量从低起，不霸占操作系统音量级别
 - 同类动作全站统一一个声音，禁止每个页面各自发明
+- **SFX 密度按性格**：发布/信息密集类约 6-9 个/10s，工具/专注类 0-3 个/10s；交付前删 30-50% 冗余 cue（克制）
+- **时钟对齐**：优先排 SFX 时间轴，视觉再适配 SFX 节奏，避免对不齐违和（±1 帧）
+- **一处素材库全站统一**：音源统一放 `design/output/assets/sfx/`，SFX 按语义分类集中复用同套素材库，禁止每页各自发明（命名按触发动作，见清单）
+- SFX 与 BGM 双轨时各自由频段隔离（SFX 高频 / BGM 中低频），本 spec 只承担结果性 SFX
 
 ### 声音 Token
 
@@ -162,7 +201,8 @@ sound-duration-notify: 250ms
 
 ### 实现要点
 
-- HTML 高保真原型用 `<audio>` + WebAudio 播放预制 `.mp3`；浏览器自动播放策略下，首次用户交互后解锁
+- HTML 高保真原型用 `<audio>` + WebAudio 播放预制 `.mp3`；浏览器自动播放策略下，**首次用户交互（任意 click/keydown）后解锁 AudioContext**，解锁前的结果性反馈静默跳过（不报错），解锁后自动恢复
+- 音源缺失/解码失败的兜底：播放失败静默跳过该 cue，不让 JS 报错拖垮交互（`pageerror` 硬闸门优先于声音）；交付前无音源时明说「声音待补」而非假装已实现。**无音源单文件原型可用 WebAudio 合成短音作占位，但须在产物中显式标注「合成占位，正式音源待补」**——显式标注不算假装已实现，无标注的合成音才算
 - 每个人都可关：全局静音开关（默认关即开），关闭后不播放任何反馈音
 - 尊重系统减弱/静音设置；无声设备自动跳过，不报错
 
@@ -183,6 +223,14 @@ sound-duration-notify: 250ms
 - [ ] 高频交互（hover）不加音，只有结果性动作出声
 - [ ] 声音短促一次性，非循环 BGM
 - [ ] 提供静音开关，尊重系统静音/减弱设置
+- [ ] 主 easing = expoOut 语义，非 easeOut / linear
+- [ ] page load 由单条 paused timeline orchestrated，含 30ms stagger
+- [ ] 场景切换 autoAlpha 交叠，无 >0.3s 空白；非 PowerPoint 逐屏硬切
+- [ ] hero/锚点元素跨片段持续；状态变化用 Shared Element，非两元素 cross-fade
+- [ ] 焦点切换含 blur（不只 opacity）；AI 文字非逐字蹦、数字非匀速 setInterval
+- [ ] SFX 密度符合性格（发布 6-9 vs 工具 0-3 /10s），一处素材库全站统一
+- [ ] 音频解锁：AudioContext 在首次用户交互后解锁，解锁前静默跳过；音源缺失/播放失败静默兜底不产生 JS 报错
+- [ ] 进阶细则速查行见 `specs/motion/motion-audio-rules.md`
 
 ## 边界与不做项
 
@@ -190,4 +238,4 @@ sound-duration-notify: 250ms
 - 不定义 Token 架构与组件（见 `specs/design-system`，动效 Token 归属设计系统）
 - 各端平台特有动效实现（如 iOS 转场 API、Android Shared Element）由各端 spec 补充
 - 动效代码实现由开发负责，本规范止于动效设计
-- **声音只做「结果性交互反馈」**，不定义背景音乐/电影配乐编排（那是内容生产场景，见 huashu-design 的音频管线）；本规范不承担 BGM、解说、音效设计脚本等叙事型音频
+- **声音只做「结果性交互反馈」**，不定义背景音乐/电影配乐编排（那是内容生产场景，见 `specs/media` 音频管线，不在本规范内）；本规范不承担 BGM、解说、音效设计脚本等叙事型音频，也不承接 BGM lowpass/amix 工程、Slow-Fast-Boom-Stop 叙事配比、decks 逐屏模型——BGM/叙事音频与 decks 链保持不迁移

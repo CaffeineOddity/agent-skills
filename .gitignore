@@ -1,2 +1,4 @@
 # 忽略 huashu-design skill
 huashu-design/
+node_modules/
+design/output-selftest/node_modules/*
