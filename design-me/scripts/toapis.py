@@ -61,7 +61,7 @@ def _resolve_config() -> dict[str, str]:
     merged: dict[str, str] = {}
     merged.update(file_env)
     # 进程环境变量覆盖文件值
-    for key in ("TOAPIS_API_KEY", "TOAPIS_BASE_URL"):
+    for key in ("TOAPIS_API_KEY", "TOAPIS_BASE_URL", "TOAPIS_IMAGE_MODEL", "TOAPIS_VIDEO_MODEL"):
         val = os.environ.get(key)
         if val:
             merged[key] = val
@@ -687,6 +687,28 @@ def _resolve_prompt(args: argparse.Namespace) -> str:
     return prompt
 
 
+# 图像/视频默认模型（可被 config/.env 的 TOAPIS_IMAGE_MODEL / TOAPIS_VIDEO_MODEL 覆盖，
+# 进程环境变量同键亦可覆盖；--model 显式参数优先级最高）
+DEFAULT_IMAGE_MODEL = "gpt-image-2"
+DEFAULT_VIDEO_MODEL = "veo3.1-fast"
+
+ENV_MODEL_KEYS = {
+    "image": "TOAPIS_IMAGE_MODEL",
+    "video": "TOAPIS_VIDEO_MODEL",
+}
+
+
+def _resolve_model(args_model: str, command: str) -> str:
+    """解析模型：--model 显式参数 > 环境变量/.env 键 > 内置默认值。"""
+    if args_model:
+        return args_model
+    config = _resolve_config()
+    model = config.get(ENV_MODEL_KEYS[command], "")
+    if not model:
+        model = DEFAULT_IMAGE_MODEL if command == "image" else DEFAULT_VIDEO_MODEL
+    return model
+
+
 def _cli() -> None:
     """命令行入口，支持图像/视频生成与上传。
 
@@ -706,7 +728,7 @@ def _cli() -> None:
 
     # 图像生成
     p_img = sub.add_parser("image", help="生成图像")
-    p_img.add_argument("--model", required=True, help="图像模型名")
+    p_img.add_argument("--model", default="", help="图像模型名（缺省取 TOAPIS_IMAGE_MODEL 或 gpt-image-2）")
     p_img.add_argument("--prompt", default="", help="生成提示词")
     p_img.add_argument("--prompt-file", default="", help="从文件读取提示词（与 --prompt 二选一）")
     p_img.add_argument("--size", default="1:1", help="比例，如 16:9、1:1")
@@ -720,7 +742,7 @@ def _cli() -> None:
 
     # 视频生成
     p_vid = sub.add_parser("video", help="生成视频")
-    p_vid.add_argument("--model", required=True, help="视频模型名")
+    p_vid.add_argument("--model", default="", help="视频模型名（缺省取 TOAPIS_VIDEO_MODEL 或 veo3.1-fast）")
     p_vid.add_argument("--prompt", default="", help="生成提示词")
     p_vid.add_argument("--prompt-file", default="", help="从文件读取提示词（与 --prompt 二选一）")
     p_vid.add_argument("--duration", type=int, default=0, help="视频时长秒数")
@@ -758,8 +780,9 @@ def _cli() -> None:
         return
 
     if args.command == "image":
+        model = _resolve_model(args.model, "image")
         params = ImageGenParams(
-            model=args.model,
+            model=model,
             prompt=_resolve_prompt(args),
             size=args.size,
             resolution=args.resolution,
@@ -768,7 +791,7 @@ def _cli() -> None:
             reference_images=args.ref or [],
             client_business_id=args.bid,
         )
-        print(f"提交图像任务: model={args.model} size={args.size}")
+        print(f"提交图像任务: model={model} size={args.size}")
         result = generate_image(params, max_wait=args.max_wait)
         if result.is_completed:
             print(f"✅ 生成完成: {result.url}")
@@ -780,15 +803,16 @@ def _cli() -> None:
         return
 
     if args.command == "video":
+        model = _resolve_model(args.model, "video")
         params = VideoGenParams(
-            model=args.model,
+            model=model,
             prompt=_resolve_prompt(args),
             duration=args.duration,
             aspect_ratio=args.aspect_ratio,
             image_urls=args.ref or [],
             client_business_id=args.bid,
         )
-        print(f"提交视频任务: model={args.model} aspect={args.aspect_ratio}")
+        print(f"提交视频任务: model={model} aspect={args.aspect_ratio}")
         result = generate_video(params, max_wait=args.max_wait)
         if result.is_completed:
             print(f"✅ 生成完成: {result.url}")
