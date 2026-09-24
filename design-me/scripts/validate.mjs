@@ -258,6 +258,75 @@ const v8Bad = [];
 if (v8Bad.length) fail("brand-token-diff", v8Bad.join(" | "));
 else ok("brand-token-diff", "品牌手册 :root Token 与色板 diff ≤5%");
 
+/* ---------- V10 品牌资产 SVG 用色治理（specs/brand「色彩不可用未定义色」可执行化） ---------- */
+// design/regression/brand{,-critic-round2}/assets/*.svg 的 fill/stroke hex 须在对应 palette.json 内（含 critic-round2）
+const brandSvgBad = [];
+{
+  for (const sub of ["", "/brand-critic-round2"]) {
+    const aDir = join(regDir, "brand" + sub, "assets");
+    if (!existsSync(aDir)) continue;
+    const pals = readdirSync(aDir).filter((f) => f.endsWith("-palette.json") || f === "palette.json");
+    if (!pals.length) continue;
+    const pal = JSON.parse(readFileSync(join(aDir, pals[0]), "utf8"));
+    const palHex = new Set((pal.colors || []).map((c) => (c.hex || "").toUpperCase()));
+    for (const f of readdirSync(aDir).filter((f) => f.endsWith(".svg"))) {
+      const s = readFileSync(join(aDir, f), "utf8");
+      for (const m of s.matchAll(/(?:fill|stroke)="(#[0-9a-fA-F]{3,8})"/g)) {
+        if (!palHex.has(m[1].toUpperCase())) brandSvgBad.push(`brand${sub || ""}/assets/${f}: ${m[1]} 未入色板`);
+      }
+    }
+  }
+}
+if (brandSvgBad.length) fail("brand-svg-palette", brandSvgBad.join(" | "));
+else ok("brand-svg-palette", "品牌 SVG 资产用色全部在色板内（含单色/反白变体）");
+
+/* ---------- V9 图标集一致性（specs/icon-system 验收可执行化） ---------- */
+// design/regression/icon-system/assets/icons/** 有 SVG 时逐文件校验：
+// viewBox 一致、stroke-width 取值唯一、线框图标 linecap/linejoin=round、含 currentColor、命名合规
+const v10Bad = [];
+let v10Count = 0;
+{
+  // icon-system（ic_*）与 illustration（ill_*）共用结构校验；命名前缀族不同
+  const dirs = [
+    ["icon-system", "assets/icons", /^ic_(action|nav|status|content|system)_[a-z0-9_]+(_filled)?\.svg$/, "ic_<类别>_<名称>"],
+    ["illustration", "assets/icons", /^ill_[a-z0-9_]+\.svg$/, "ill_<场景>_<用途>"],
+  ];
+  for (const [dom, sub, nameRe, nameDesc] of dirs) {
+    const iDir = join(regDir, dom, sub);
+    const svgs = [];
+    (function walk(d, rel) {
+      if (!existsSync(d)) return;
+      for (const e of readdirSync(d, { withFileTypes: true })) {
+        if (e.isDirectory()) walk(join(d, e.name), rel ? rel + "/" + e.name : e.name);
+        else if (e.name.endsWith(".svg")) svgs.push({ path: join(d, e.name), rel: (rel ? rel + "/" : "") + e.name });
+      }
+    })(iDir, "");
+    v10Count += svgs.length;
+    if (svgs.length) {
+      const vbs = new Set();
+      const widths = new Set();
+      for (const s of svgs) {
+        const c = readFileSync(s.path, "utf8");
+        const vb = (c.match(/viewBox="([^"]+)"/) || [])[1];
+        if (vb) vbs.add(vb);
+        for (const w of c.matchAll(/stroke-width="([\d.]+)"/g)) widths.add(w[1]);
+        if (!/currentColor/.test(c)) v10Bad.push(`${s.rel}: 缺 currentColor`);
+        if (/<text/.test(c)) v10Bad.push(`${s.rel}: 含 <text>（未转曲）`);
+        if (!nameRe.test(s.rel.split("/").pop()))
+          v10Bad.push(`${s.rel}: 命名不合 ${nameDesc} 规范`);
+        if (/stroke="currentColor"/.test(c) && !/stroke-linecap="round"/.test(c))
+          v10Bad.push(`${s.rel}: 线框图标端点未统一 round`);
+        if (/stroke="currentColor"/.test(c) && /Z/.test((c.match(/d="([^"]+)"/) || [,""])[1]) && !/stroke-linejoin="round"/.test(c))
+          v10Bad.push(`${s.rel}: 闭合路径转角未统一 round`);
+      }
+      if (vbs.size > 1) v10Bad.push(`${dom}: viewBox 不一致：${[...vbs].join(" / ")}`);
+      if (widths.size > 1) v10Bad.push(`${dom}: stroke-width 档位混用：${[...widths].join(" / ")}`);
+    }
+  }
+}
+if (v10Bad.length) fail("icon-set", v10Bad.join(" | "));
+else ok("icon-set", `图标/插画集结构一致性（${v10Count} 枚 SVG：画布/线宽/圆角/currentColor/命名）`);
+
 /* ---------- 汇总 ---------- */
-if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0 } });
-else { out.report.push(`\n全部通过（${specMds.length} 个 spec，7 项校验）`); exit(0, out); }
+if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });
+else { out.report.push(`\n全部通过（${specMds.length} 个 spec，8 项校验）`); exit(0, out); }
