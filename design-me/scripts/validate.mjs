@@ -419,6 +419,41 @@ const v12Bad = [];
   }
 }
 
+/* ---------- V13 插画色板登记（specs/illustration I3「板外色禁令+暗色须登记」可执行化） ---------- */
+{
+  const v13Bad = [];
+  const illDirs = [join(regDir, "illustration"), join(regDir, "illustration", "illustration-critic-round2")];
+  const paletteFiles = [];
+  for (const d of illDirs) {
+    const ad = join(d, "assets");
+    if (!existsSync(ad)) continue;
+    for (const f of readdirSync(ad)) if (f.endsWith("-palette.json") || f === "palette.json") paletteFiles.push(join(ad, f));
+  }
+  const registered = new Set();
+  for (const pf of paletteFiles) {
+    try {
+      const j = JSON.parse(readFileSync(pf, "utf8"));
+      for (const col of j.colors || []) {
+        if (col.hex) registered.add(col.hex.toUpperCase());
+        if (col.dark) registered.add(col.dark.toUpperCase());
+      }
+    } catch { v13Bad.push(`色板 JSON 解析失败: ${pf}`); }
+  }
+  let hexCount = 0;
+  for (const d of illDirs) {
+    const f = join(d, "illustration-set.html");
+    if (!existsSync(f)) continue;
+    const html = readFileSync(f, "utf8");
+    const hexes = [...html.matchAll(/--brand-[a-z-]+:(#[0-9A-Fa-f]{6})/g)].map((m) => m[1].toUpperCase());
+    hexCount += hexes.length;
+    for (const h of new Set(hexes))
+      if (!registered.has(h)) v13Bad.push(`${d.split("/").pop()}: 插画用色 ${h} 未登记进任何 *-palette.json（I3 板外色禁令）`);
+  }
+  if (!paletteFiles.length) v13Bad.push("illustration 域无任何 *-palette.json 色板登记文件（I3 暗色映射登记无载体）");
+  if (v13Bad.length) fail("ill-palette", v13Bad.join(" | "));
+  else ok("ill-palette", `插画色彩全部登记色板（${hexCount} 处 --brand-* hex 对照 ${registered.size} 个登记值，含暗色分支）`);
+}
+
 /* ---------- V11 封面标题对比度（specs/cover C4「公式复核不目测」可执行化） ---------- */
 // design/regression/cover/*-matrix.html 存在时：提取 .cv 区块内文字色/背景色 hex（含提亮映射），WCAG 比值 ≥4.5
 const coverBad = [];
@@ -480,6 +515,35 @@ const copyBad = [];
 }
 if (copyBad.length) fail("copy-set", copyBad.join(" | "));
 else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术语一致");
+
+/* ---------- V13 研究摘要结构（specs/research 验收可执行化） ---------- */
+// design/regression/research/*.md：6 部分标题齐、模式表 ≥5 行含场景列、moodboard 6 维、建议含依据标注
+const resBad = [];
+{
+  const rDir = join(regDir, "research");
+  if (existsSync(rDir)) {
+    for (const f of readdirSync(rDir).filter((x) => x.endsWith(".md") && x !== "SELF-CHECK.md")) {
+      const c = readFileSync(join(rDir, f), "utf8");
+      for (const sec of ["问题定义", "竞品洞察", "模式清单", "用户场景", "风格方向", "设计建议"]) {
+        if (!c.includes(sec)) resBad.push(`${f}: 缺摘要部分「${sec}」`);
+      }
+      // 模式表行数：形如 | N | 模式 | 的行
+      const patRows = [...c.matchAll(/^\|\s*\d+\s*\|/gm)].length;
+      if (patRows < 5) resBad.push(`${f}: 模式清单仅 ${patRows} 条（须 ≥5 且每条含适用场景）`);
+      else if (!c.includes("适用场景")) resBad.push(`${f}: 模式清单缺「适用场景」标注列`);
+      for (const d of ["色彩", "字体", "排版", "图标", "插画", "摄影"]) {
+        if (!c.includes(d)) resBad.push(`${f}: moodboard 缺维度「${d}」`);
+      }
+      // 建议部分每条带依据（模式 N/场景/竞品 字样）
+      const sug = c.slice(c.lastIndexOf("设计建议"));
+      const items = sug.split("\n").filter((l) => /^\d+\./.test(l.trim()));
+      if (items.length && items.some((l) => !/(模式\s*\d|场景|竞品|基线)/.test(l)))
+        resBad.push(`${f}: 设计建议存在无依据条目（须标注模式/场景/竞品来源）`);
+    }
+  }
+}
+if (resBad.length) fail("research-summary", resBad.join(" | "));
+else ok("research-summary", "研究摘要结构完整（6 部分/模式 ≥5 含场景/moodboard 6 维/建议有依据）");
 
 /* ---------- 汇总 ---------- */
 if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });
