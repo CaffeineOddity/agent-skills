@@ -144,7 +144,7 @@
 | 约束 | 无平台比例约束 | 按平台比例 + 安全区 |
 | 目标 | 辅助阅读、打破文字墙 | 吸引点击、传达主题 |
 | 文字 | 图注辅助，不喧宾夺主 | 标题排版为核心 |
-| 导出 | SVG 优先 | JPG/PNG 按平台 |
+| 导出 | PNG/JPG/SVG 视风格 | JPG/PNG 按平台 |
 
 ### I8. 导出
 
@@ -160,17 +160,19 @@
 
 | 格式 | 用途 |
 |------|------|
-| SVG | 矢量主格式，各端通用，支持主题着色 |
-| Lottie JSON | 动画插画（After Effects 导出） |
-| PNG @2x/@3x | 不支持 SVG/Lottie 的场景降级 |
-| WebP | Web 端有动画需求时 |
+| SVG | 矢量格式（可选），各端通用、支持主题着色；**不做强制要求** |
+| GIF | 简单循环动画/表情便捷格式，跨端通用 |
+| PNG | 静态插画通用格式；透明背景插画普遍首选 |
+| JPG | 照片质感/文章配图/无透明需求的场景 |
+| Lottie JSON | 复杂动画插画（After Effects 导出），按需 |
+| WebP | Web 端有动画需求时（可选） |
 
-- 静态插画优先 SVG，支持 `currentColor` 主题着色
-- 动画插画优先 Lottie
-- 命名：`ill_empty_<场景>.svg`、`ill_loading_<场景>.json`
+- **格式不强制 SVG**：应根据插画风格与呈现方式选择最合适的格式——写实/笔触/照片质感/需 AI 生成（`scripts/toapis.py`）的插画，用 **PNG / JPG / GIF** 更自然、更佳；SVG 仅在有内联・主题着色・矢量需求时选用
+- 动效插画可选 GIF / Lottie；静态插画选 PNG / JPG / SVG
+- 命名：`ill_empty_<场景>.png/.jpg/.gif/.svg`、`ill_loading_<场景>.json`
 - 按 `specs/mobile` 的切图命名规范，文件系统兼容
 
-插画集 HTML 定稿后导出正式 SVG/Lottie/PNG 文件。
+插画集 HTML 定稿后导出正式 PNG/JPG/GIF/SVG/Lottie 文件。
 
 ## 验收标准
 
@@ -181,8 +183,8 @@
 - [ ] 每张空状态含插画 + 标题 + 引导文案 + 行动按钮
 - [ ] 引导页 ≤ 3 页，每页一个功能点
 - [ ] 加载动画无缝循环 1-2 秒，尊重 reduced-motion
-- [ ] 静态插画优先 SVG 且支持主题着色
-- [ ] 动画插画优先 Lottie
+- [ ] 静态插画选 PNG/JPG/SVG 中与风格最契合的格式，不强制 SVG
+- [ ] 动画插画可用 GIF 或 Lottie
 - [ ] 插画在 UI 卡片内占比 ≤ 40%
 - [ ] 命名遵循 `ill_<场景>_<用途>` 规范
 - [ ] 文章配图：同篇多图风格/色彩/线宽/比例统一
@@ -197,4 +199,4 @@
 - 封面/头图设计见 `specs/cover`，本 spec 仅覆盖产品界面内插画及文章内文配图
 - 文章封面（公众号头图、小红书封面、YouTube 缩略图等）见 `specs/cover`，不在此处
 - Token 架构与组件化见 `specs/design-system`，插画资源导出归属各端切图规范
-- 插画的代码集成（SVG 内联/Lottie 库）由开发负责
+- 插画的代码集成（SVG 内联/Lottie 库/PNG·GIF 资源引用）由开发负责

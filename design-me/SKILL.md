@@ -197,6 +197,8 @@ stateDiagram-v2
 
 | 日期 | 能力域 | 产物暴露的短板 | spec 改动文件 | 根因与改法 |
 |------|--------|--------------|--------------|-----------|
+| 2026-09-27 | illustration | 强制 SVG/currentColor 约束逼出「手搓 SVG」机械呆板插画，写实/笔触/AI 生成场景该用位图；且「动画优先 Lottie」门槛高 | `specs/illustration/illustration-design.md`（I8 导出） | 格式改为按风格选择：不强制 SVG，允许 PNG/JPG/GIF；动画可用 GIF 或 Lottie；命名前缀族放宽 |
+| 2026-09-27 | brand | IP 久为「可选」，从未被要求实产——手册里 IP 区块只做 N/A/描述占位，始终没有真实 IP 形象生成；品牌触点/表情缺位 | `specs/brand/brand-design.md`（B6 与验收） | IP 从可选升为必交付项：须 `toapis.py` 生成真实形象（PNG/JPG/GIF 透明底或 GIF 动画）；生成前写 `xxx_prompt.md`；验收拆为两条（真实素材 + 唯一事实来源） |
 | 2026-09-27 | motion | 「退场快 60-70%」与时长 Token 下限冲突（.3s 入场的 65% 快=105ms 贴 fast 下限，硬取比例反不自然） | `specs/motion/motion-design.md` | 规则缺冲突仲裁；补「比例与 Token 下限冲突时以 Token 下限为准」 |
 | 2026-09-27 | design-system | 「每组件 5 状态变体」对非交互原子（icon/text）机械套用，硬凑 hover/active 假状态 | `specs/design-system/design-system.md`（验收项） | 状态集未按组件语义分级；改「按语义取子集：交互组件 5 态全查，非交互原子查 default/disabled，不适用标 N/A」 |
 | 2026-09-27 | brand | 「视觉偏差 <5%」有可执行定义（Token diff）但无人真跑过，靠手数漏检（本轮首跑即抓出 hairline 衍生色未入色板，10%>5%） | `scripts/validate.mjs`（新增 V8 brand-token-diff） | 脚本化：`design/regression/brand/` 有 `*-brand.html`+`assets/*-palette.json` 时解析 :root 与色板逐项 diff，>5% 失败；衍生色也须入色板 |

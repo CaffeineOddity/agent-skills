@@ -672,6 +672,21 @@ IMAGE_SIZE_PIXELS = {
 # ────────────────────────── CLI 入口 ──────────────────────────
 
 
+def _resolve_prompt(args: argparse.Namespace) -> str:
+    """解析提示词：--prompt-file 读文件（文件全文即模型输入），与 --prompt 二选一互斥。"""
+    prompt_file = getattr(args, "prompt_file", "")
+    prompt = getattr(args, "prompt", "")
+    if prompt_file and prompt:
+        raise SystemExit("❌ --prompt 与 --prompt-file 二选一，不可同时给出")
+    if prompt_file:
+        from pathlib import Path
+
+        return Path(prompt_file).read_text(encoding="utf-8")
+    if not prompt:
+        raise SystemExit("❌ 缺提示词：须提供 --prompt 或 --prompt-file 之一")
+    return prompt
+
+
 def _cli() -> None:
     """命令行入口，支持图像/视频生成与上传。
 
