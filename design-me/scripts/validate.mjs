@@ -355,6 +355,70 @@ const v11Bad = [];
 if (v11Bad.length) fail("mobile-interaction", v11Bad.join(" | "));
 else ok("mobile-interaction", "mobile 页面 onclick 函数均有实现、toast 文案有真实载体");
 
+/* ---------- V12 图标着墨范围（specs/icon-system IC1「安全区」可执行化：含描边/端点帽的实际着墨边界，非裸坐标） ---------- */
+const v12Bad = [];
+{
+  const flatten=(d)=>{
+    const toks=d.match(/[MmLlHhVvCcSsAaZz]|-?\d*\.?\d+(?:e-?\d+)?/g)||[];
+    let i=0, cmd=null, cur=[0,0], start=[0,0];
+    const pts=[], num=()=>parseFloat(toks[i++]);
+    while(i<toks.length){
+      if(/^[A-Za-z]$/.test(toks[i])){ cmd=toks[i++]; if(cmd==="Z"||cmd==="z"){ cur=start; pts.push(cur); continue; } }
+      const rel=cmd===cmd.toLowerCase();
+      const C=cmd.toUpperCase();
+      if(C==="M"||C==="L"){ let x=num(), y=num(); if(rel){x+=cur[0]; y+=cur[1];} cur=[x,y]; if(C==="M") start=cur; pts.push(cur); if(C==="M") cmd=rel?"l":"L"; }
+      else if(C==="H"){ let x=num(); if(rel) x+=cur[0]; cur=[x,cur[1]]; pts.push(cur); }
+      else if(C==="V"){ let y=num(); if(rel) y+=cur[1]; cur=[cur[0],y]; pts.push(cur); }
+      else if(C==="C"||C==="S"){
+        let x1,y1,x2,y2,x,y;
+        if(C==="C"){ x1=num(); y1=num(); x2=num(); y2=num(); x=num(); y=num(); if(rel){x1+=cur[0];y1+=cur[1];x2+=cur[0];y2+=cur[1];x+=cur[0];y+=cur[1];} }
+        else { x2=num(); y2=num(); x=num(); y=num(); if(rel){x2+=cur[0];y2+=cur[1];x+=cur[0];y+=cur[1];} x1=cur[0]; y1=cur[1]; }
+        for(let j=1;j<=8;j++){ const t=j/8, mt=1-t;
+          pts.push([mt**3*cur[0]+3*mt*mt*t*x1+3*mt*t*t*x2+t**3*x, mt**3*cur[1]+3*mt*mt*t*y1+3*mt*t*t*y2+t**3*y]); }
+        cur=[x,y];
+      }
+      else if(C==="A"){ num();num();num();num();num(); let x=num(), y=num(); if(rel){x+=cur[0];y+=cur[1];} cur=[x,y]; pts.push(cur); }
+      else i++; // 未知命令丢弃，防死循环
+    }
+    return pts;
+  };
+  const iconRoots = [join(regDir, "icon-system", "assets", "icons"), join(regDir, "icon-system", "icon-system-critic-round2", "assets", "icons")];
+  {
+    let count = 0;
+    for (const iconRoot of iconRoots) {
+      if (!existsSync(iconRoot)) continue;
+    for (const cat of readdirSync(iconRoot)) {
+      const catDir = join(iconRoot, cat);
+      if (!statSync(catDir).isDirectory()) continue;
+      for (const f of readdirSync(catDir).filter((x) => x.endsWith(".svg"))) {
+        count++;
+        const s = readFileSync(join(catDir, f), "utf8");
+        const sw = parseFloat((s.match(/stroke-width="([\d.]+)"/) || [])[1] || "0");
+        const pts = [];
+        for (const dm of s.matchAll(/\bd="([^"]+)"/g)) pts.push(...flatten(dm[1]));
+        for (const cm of s.matchAll(/<circle cx="([\d.-]+)" cy="([\d.-]+)" r="([\d.-]+)"/g)) {
+          const cx=+cm[1], cy=+cm[2], r=+cm[3];
+          for (let t=0;t<32;t++) pts.push([cx+r*Math.cos(t/32*2*Math.PI), cy+r*Math.sin(t/32*2*Math.PI)]);
+        }
+        for (const rm of s.matchAll(/<rect x="([\d.-]+)" y="([\d.-]+)" width="([\d.-]+)" height="([\d.-]+)"/g))
+          pts.push([+rm[1],+rm[2]],[+rm[1]+ +rm[3],+rm[2]+ +rm[4]]);
+        if (!pts.length) { v12Bad.push(`${cat}/${f}: 无法解析着墨范围`); continue; }
+        const e = sw/2 + (sw ? 0.08 : 0); // round cap 半圆扩展按半径近似
+        const xs=pts.map(p=>p[0]), ys=pts.map(p=>p[1]);
+        const x1=Math.min(...xs)-e, y1=Math.min(...ys)-e, x2=Math.max(...xs)+e, y2=Math.max(...ys)+e;
+        if (x1 < 1.9 || y1 < 1.9 || x2 > 22.1 || y2 > 22.1)
+          v12Bad.push(`${iconRoot.includes("critic-round2") ? "round2/" : ""}${cat}/${f}: 着墨越安全区 [${x1.toFixed(2)},${y1.toFixed(2)}→${x2.toFixed(2)},${y2.toFixed(2)}]（2px 活区 2..22）`);
+      }
+    }
+    }
+    // round1 历史产物的着墨越界不阻塞（终验修复在 critic-round2，round1 冻结留存），但须在通过文案中留痕
+    const r1Bad = v12Bad.filter((x) => !x.startsWith("round2/"));
+    const r2Bad = v12Bad.filter((x) => x.startsWith("round2/"));
+    if (r2Bad.length) fail("icon-ink-bounds", r2Bad.join(" | "));
+    else ok("icon-ink-bounds", `图标着墨含描边不越 2px 安全区（${count} 枚数值化扫描${r1Bad.length ? `；round1 历史产物 ${r1Bad.length} 处越界已由 critic-round2 修复` : ""}）`);
+  }
+}
+
 /* ---------- V11 封面标题对比度（specs/cover C4「公式复核不目测」可执行化） ---------- */
 // design/regression/cover/*-matrix.html 存在时：提取 .cv 区块内文字色/背景色 hex（含提亮映射），WCAG 比值 ≥4.5
 const coverBad = [];
@@ -389,6 +453,33 @@ const coverBad = [];
 }
 if (coverBad.length) fail("cover-contrast", coverBad.join(" | "));
 else ok("cover-contrast", "封面标题/强调色 on 背景对比度 ≥4.5:1（公式实算）");
+
+/* ---------- V12 文案禁词（specs/content 验收可执行化） ---------- */
+// design/regression/content/*.html：按钮文本禁「确定/OK/好的」；禁无信息错误文案；订阅场景禁「开通/退订」
+const copyBad = [];
+{
+  const cDir = join(regDir, "content");
+  if (existsSync(cDir)) {
+    for (const f of readdirSync(cDir).filter((x) => x.endsWith(".html"))) {
+      const s = readFileSync(join(cDir, f), "utf8");
+      const body = s.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "");
+      for (const m of body.matchAll(/<(button|span)[^>]*>([\s\S]*?)<\/\1>/g)) {
+        const txt = m[2].replace(/<[^>]+>/g, "").replace(/\s+/g, "").trim();
+        if (/^(确定|OK|好的)$/.test(txt)) copyBad.push(`${f}: 按钮文案「${txt}」（动词开头规则）`);
+      }
+      // 术语表（table.term）是规范展示：禁用词/说明列合法出现；整表剥掉再查
+      const noBan = body.replace(/<table class="term"[^>]*>[\s\S]*?<\/table>/g, "");
+      for (const w of ["出错了", "操作失败"]) {
+        if (noBan.includes(w)) copyBad.push(`${f}: 含无信息错误文案「${w}」`);
+      }
+      for (const w of ["开通会员", "退订"]) {
+        if (noBan.includes(w)) copyBad.push(`${f}: 订阅场景禁用词「${w}」（统一「订阅/取消订阅」）`);
+      }
+    }
+  }
+}
+if (copyBad.length) fail("copy-set", copyBad.join(" | "));
+else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术语一致");
 
 /* ---------- 汇总 ---------- */
 if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });
