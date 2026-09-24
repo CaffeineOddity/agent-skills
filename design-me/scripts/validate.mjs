@@ -554,6 +554,52 @@ const copyBad = [];
 if (copyBad.length) fail("copy-set", copyBad.join(" | "));
 else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术语一致");
 
+/* ---------- V15 术语表载体 + 弹层 a11y 特征（specs/content「单一事实来源」+ review 弹层基线，可执行化） ---------- */
+{
+  const v15Bad = [];
+  // (a) terms.json 存在且 JSON 可解析；以禁用词驱动 content 域 HTML 全文扫描（剥术语表/脚本/样式）
+  const cDirs = [join(regDir, "content"), join(regDir, "content", "content-critic-round2")].filter(existsSync);
+  let termsJson = null;
+  for (const d of cDirs) {
+    const tf = join(d, "terms.json");
+    if (existsSync(tf)) { try { termsJson = JSON.parse(readFileSync(tf, "utf8")); } catch (e) { v15Bad.push(`terms.json 解析失败: ${e.message}`); } }
+  }
+  if (!termsJson) {
+    v15Bad.push("content 域无 terms.json——术语表「与 Token 一样是单一事实来源」无载体（仅 HTML 表格不可执行）");
+  } else {
+        // 场景禁用词全文扫描；「确认动作」的 确定/OK/好的 只查按钮元素文本（说明性文字/规则描述合法出现）
+    const textBans = (termsJson.terms || []).filter((t) => t.concept !== "确认动作").flatMap((t) => t.ban || []);
+    const btnBans = ((termsJson.terms || []).find((t) => t.concept === "确认动作") || {}).ban || [];
+    for (const d of cDirs) {
+      for (const f of readdirSync(d).filter((x) => x.endsWith(".html"))) {
+        const s = readFileSync(join(d, f), "utf8");
+        const body = s.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<style[\s\S]*?<\/style>/g, "")
+          .replace(/<table class="term"[\s\S]*?<\/table>/g, "").replace(/<!--[\s\S]*?-->/g, "");
+        for (const w of textBans) if (body.includes(w)) v15Bad.push(`${d.split("/").pop()}/${f}: 文案含术语禁用词「${w}」（terms.json）`);
+        for (const m of body.matchAll(/<(button|span)[^>]*>([\s\S]*?)<\/\1>/g)) {
+          const txt = m[2].replace(/<[^>]+>/g, "").replace(/\s+/g, "").trim();
+          if (btnBans.includes(txt)) v15Bad.push(`${d.split("/").pop()}/${f}: 按钮文案「${txt}」（terms.json 确认动作禁用）`);
+        }
+      }
+    }
+  }
+  // (b) 审阅弹层 a11y 特征（只约束 critic-round2 起；历史 round1 冻结不溯及）
+  for (const d of cDirs.filter((x) => x.includes("critic-round2"))) {
+    for (const f of readdirSync(d).filter((x) => x.endsWith(".html"))) {
+      const s = readFileSync(join(d, f), "utf8");
+      const script = (s.match(/<script>[\s\S]*?<\/script>/g) || []).join("");
+      if (s.includes('class="modal"')) {
+        if (!/role="dialog"[^>]*aria-modal="true"|aria-modal="true"[^>]*role="dialog"/.test(s)) v15Bad.push(`${d.split("/").pop()}/${f}: 审阅弹层缺 aria-modal="true"`);
+        if (!script.includes("closeModal")) v15Bad.push(`${d.split("/").pop()}/${f}: 弹层缺统一 closeModal`);
+        if (!/key\s*!==?\s*['"]Tab['"]|key\s*===?\s*['"]Tab['"]/.test(script)) v15Bad.push(`${d.split("/").pop()}/${f}: 弹层缺 Tab 困笼`);
+        if (!/\.focus\(\)/.test(script)) v15Bad.push(`${d.split("/").pop()}/${f}: 弹层打开后未移动焦点`);
+      }
+    }
+  }
+if (v15Bad.length) fail("term-modal", v15Bad.join(" | "));
+  else ok("term-modal", `terms.json 载体驱动禁词扫描（${(termsJson?.terms || []).length} 条术语）+ round2 弹层 a11y 特征齐全`);
+}
+
 /* ---------- V13 研究摘要结构（specs/research 验收可执行化） ---------- */
 // design/regression/research/*.md：6 部分标题齐、模式表 ≥5 行含场景列、moodboard 6 维、建议含依据标注
 const resBad = [];
@@ -617,6 +663,37 @@ const handBad = [];
 }
 if (handBad.length) fail("handoff-pack", handBad.join(" | "));
 else ok("handoff-pack", "交付包完整（Token 六组/标注无裸 hex/资源命名+currentColor）");
+
+/* ---------- V15 toapis Prompt 文件（specs/image-prompt 验收可执行化） ---------- */
+// design/regression/image-prompt/*_prompt.md：必备节齐（可选节缺项须有说明）、负面词 ≥3、品牌 hex 绑定、toapis 命令含 --save
+const prmBad = [];
+{
+  const pDir = join(regDir, "image-prompt");
+  if (existsSync(pDir)) {
+    for (const f of readdirSync(pDir).filter((x) => x.endsWith("_prompt.md"))) {
+      const c = readFileSync(join(pDir, f), "utf8");
+      for (const sec of ["用途", "内容画布", "主体与构图", "场景与风格", "负面词", "toapis 命令"]) {
+        if (!c.includes(sec)) prmBad.push(`${f}: 缺必备节「${sec}」`);
+      }
+      const neg = c.slice(c.indexOf("负面词"));
+      const negCount = (neg.match(/^\d+\./gm) || []).length;
+      if (negCount < 3) prmBad.push(`${f}: 负面词仅 ${negCount} 条（须 ≥3 且与素材类型相关）`);
+      if (!/#[0-9A-Fa-f]{6}/.test(c)) prmBad.push(`${f}: 无品牌 hex 绑定（模糊色词不可接受）`);
+      if (/企业蓝|现代感|科技蓝/.test(c)) prmBad.push(`${f}: 含模糊风格/色词`);
+      if (!/python3\s+scripts\/toapis\.py/.test(c) || !/--save/.test(c))
+        prmBad.push(`${f}: 缺 toapis 命令或 --save 落盘参数`);
+      // 品牌节存在时可选节（光线/材质/IP 特征）缺项须说明
+      if (c.includes("品牌基线绑定")) {
+        for (const opt of ["光线 / 材质", "IP 特征"]) {
+          if (!c.includes(opt) && !c.includes("不适用") && !c.includes("缺项"))
+            prmBad.push(`${f}: 可选节「${opt}」缺失且无缺项说明`);
+        }
+      }
+    }
+  }
+}
+if (prmBad.length) fail("image-prompt", prmBad.join(" | "));
+else ok("image-prompt", "Prompt 文件结构完整（必备节/负面词 ≥3/品牌 hex 绑定/toapis 命令）");
 
 /* ---------- 汇总 ---------- */
 if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });
