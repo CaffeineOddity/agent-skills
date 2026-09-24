@@ -419,6 +419,44 @@ const v12Bad = [];
   }
 }
 
+/* ---------- V14 封面数值复核（specs/cover C4「公式复核不目测」+ C6 导出落点，静态可执行化） ---------- */
+{
+  const v14Bad = [];
+  const coverDirs = [join(regDir, "cover", "cover-critic-round2")].filter(existsSync);
+  for (const d of coverDirs) {
+    const f = join(d, "cover-matrix.html");
+    if (!existsSync(f)) { v14Bad.push(`${d}: 缺 cover-matrix.html`); continue; }
+    const html = readFileSync(f, "utf8");
+    // (a) 标题字号占画布高 ≥15%：解析 .cv-* h3 的 cqh 值（container-query 下渲染占比=导出占比）
+    for (const m of html.matchAll(/\.cv-(mp|xhs|yt) h3 \{[^}]*font-size:([\d.]+)cqh/g)) {
+      const pct = parseFloat(m[2]);
+      if (pct < 15) v14Bad.push(`cover ${m[1]}: 标题字号 ${pct}% < 15% 画布高（C4）`);
+    }
+    // (b) 主标题与强调实际用色对比 ≥4.5（WCAG 公式直算）
+    const lum = (hex) => {
+      const n = hex.replace("#", "");
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255).map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const bg = (html.match(/--brand-deep:#([0-9A-Fa-f]{6})/) || [])[1];
+    if (bg) {
+      const paper = (html.match(/color:#([0-9A-Fa-f]{6})/) || [])[1];
+      const acc = (html.match(/--brand-accent-ondeep, #([0-9A-Fa-f]{6})/) || html.match(/ACCENT_ONDEEP=\'#([0-9A-Fa-f]{6})/) || [])[1];
+      const cr = (a, b2) => { const [l1, l2] = [lum(a), lum(b2)].sort((x, y) => y - x); return (l1 + 0.05) / (l2 + 0.05); };
+      if (paper && cr(paper, bg) < 4.5) v14Bad.push(`cover: 主标题对比 ${cr(paper, bg).toFixed(2)} < 4.5（C4）`);
+      if (acc && cr(acc, bg) < 4.5) v14Bad.push(`cover: 强调色 ${acc} 对比 ${cr(acc, bg).toFixed(2)} < 4.5（C4，需深底映射）`);
+    }
+    // (c) C6 正式导出：平台命名 PNG 必须实体存在
+    const ad = join(d, "assets");
+    for (const plat of ["wechat", "xiaohongshu", "youtube"]) {
+      const hit = existsSync(ad) && readdirSync(ad).some((x) => x.startsWith(plat + "_") && x.endsWith(".png"));
+      if (!hit) v14Bad.push(`cover: 缺平台导出文件 ${plat}_*.png（C6「矩阵定稿后导出正式文件」）`);
+    }
+  }
+  if (v14Bad.length) fail("cover-metric", v14Bad.join(" | "));
+  else ok("cover-metric", "封面标题字号 ≥15% 画布高、主/强调色对比 ≥4.5、3 平台导出 PNG 实体在位");
+}
+
 /* ---------- V13 插画色板登记（specs/illustration I3「板外色禁令+暗色须登记」可执行化） ---------- */
 {
   const v13Bad = [];
@@ -544,6 +582,41 @@ const resBad = [];
 }
 if (resBad.length) fail("research-summary", resBad.join(" | "));
 else ok("research-summary", "研究摘要结构完整（6 部分/模式 ≥5 含场景/moodboard 6 维/建议有依据）");
+
+/* ---------- V14 交付包完整性（specs/handoff 走查可执行化） ---------- */
+// design/regression/handoff/：tokens.json 六组键齐且合法 JSON；标注层无裸 hex；assets SVG 命名前缀 + currentColor
+const handBad = [];
+{
+  const hDir = join(regDir, "handoff");
+  if (existsSync(hDir)) {
+    const tokPath = join(hDir, "tokens.json");
+    if (existsSync(tokPath)) {
+      try {
+        const tok = JSON.parse(readFileSync(tokPath, "utf8"));
+        for (const k of ["color", "font", "space", "radius", "shadow", "motion"]) {
+          if (!tok[k] || !Object.keys(tok[k]).length) handBad.push(`tokens.json: 缺 Token 组「${k}」`);
+        }
+      } catch (e) { handBad.push(`tokens.json: 非法 JSON（${e.message}）`); }
+    }
+    for (const f of readdirSync(hDir).filter((x) => x.endsWith(".html"))) {
+      const s = readFileSync(join(hDir, f), "utf8");
+      for (const m of s.matchAll(/class="pin"[^>]*>([\s\S]*?)<\/span>/g)) {
+        const txt = m[1].replace(/<[^>]+>/g, "");
+        const bare = txt.match(/#[0-9A-Fa-f]{6}\b/g) || [];
+        if (bare.length) handBad.push(`${f}: 标注层裸 hex ${bare.join(",")}（须语义名）`);
+      }
+    }
+    const aDir = join(hDir, "assets");
+    if (existsSync(aDir)) {
+      for (const f of readdirSync(aDir).filter((x) => x.endsWith(".svg"))) {
+        if (!/^(ic|bg|ill)_[a-z0-9_-]+\.svg$/.test(f)) handBad.push(`assets/${f}: 命名不合 ic_/bg_/ill_ 前缀规范`);
+        if (!/currentColor/.test(readFileSync(join(aDir, f), "utf8"))) handBad.push(`assets/${f}: 缺 currentColor（主题着色）`);
+      }
+    }
+  }
+}
+if (handBad.length) fail("handoff-pack", handBad.join(" | "));
+else ok("handoff-pack", "交付包完整（Token 六组/标注无裸 hex/资源命名+currentColor）");
 
 /* ---------- 汇总 ---------- */
 if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });
