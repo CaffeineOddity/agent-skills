@@ -629,6 +629,29 @@ const resBad = [];
 if (resBad.length) fail("research-summary", resBad.join(" | "));
 else ok("research-summary", "研究摘要结构完整（6 部分/模式 ≥5 含场景/moodboard 6 维/建议有依据）");
 
+/* ---------- V16 研究三层真实覆盖 + 关键词锚定（specs/research R2「间接竞品 1 个」+ R6 关键词可操作化） ---------- */
+{
+  const v16Bad = [];
+  // 只约束 critic-round2 起（历史 round1 冻结不溯及）
+  const rDirs = [join(regDir, "research", "research-critic-round2")].filter(existsSync);
+  for (const d of rDirs) {
+    for (const f of readdirSync(d).filter((x) => x.endsWith(".md") && x !== "SELF-CHECK.md")) {
+      const c = readFileSync(join(d, f), "utf8");
+      // (a) 三层须各有真实落点：竞品表须含「间接」层级行——「兼任」不能让某一层整个缺席
+      const rows = [...c.matchAll(/^\|\s*([^|\n]+)\s*\|\s*([^|\n]*直接[^|\n]*|[^|\n]*间接[^|\n]*|[^|\n]*标杆[^|\n]*)\s*\|/gm)];
+      const layers = rows.map((r) => r[2]);
+      for (const l of ["间接"]) if (!layers.some((x) => x.includes(l))) v16Bad.push(`${d.split("/").pop()}/${f}: 竞品表无「${l}」层级落点（R2 三层须真实覆盖，兼任不得使层缺席）`);
+      // (b) 风格关键词须带操作性解释（关键词行/表含解释列），裸词列不可操作
+      const kw = c.match(/风格关键词[^\n]*：([^\n]*)/);
+      if (kw && !c.includes("操作性解释") && !/（[^）]{6,}）/.test(kw[1])) v16Bad.push(`${f}: 风格关键词裸词无解释（R6 须可操作化，供 Phase 1 引用）`);
+      // (c) 研究元信息：方法/日期/断言可核性注记
+      if (!c.includes("研究元信息")) v16Bad.push(`${f}: 缺研究元信息注记（方法/日期/事实断言可核性，R7 可复现性）`);
+    }
+  }
+  if (v16Bad.length) fail("research-layers", v16Bad.join(" | "));
+  else ok("research-layers", "round2 起竞品三层真实落点（含间接）+ 关键词带解释 + 研究元信息注记");
+}
+
 /* ---------- V14 交付包完整性（specs/handoff 走查可执行化） ---------- */
 // design/regression/handoff/：tokens.json 六组键齐且合法 JSON；标注层无裸 hex；assets SVG 命名前缀 + currentColor
 const handBad = [];
@@ -694,6 +717,30 @@ const prmBad = [];
 }
 if (prmBad.length) fail("image-prompt", prmBad.join(" | "));
 else ok("image-prompt", "Prompt 文件结构完整（必备节/负面词 ≥3/品牌 hex 绑定/toapis 命令）");
+
+/* ---------- V17 审阅机制骨架（specs/review 验收可执行化） ---------- */
+// design/regression/*/review*.html 或 review/：弹窗居中 flexbox 骨架、FSAA 双路径、待改/阻塞校验、存储键按 ID
+const revBad = [];
+{
+  const scan = (dir, rel) => {
+    if (!existsSync(dir)) return;
+    for (const f of readdirSync(dir).filter((x) => x.endsWith(".html") && /review/i.test(x))) {
+      const c = readFileSync(join(dir, f), "utf8");
+      if (!/align-items:\s*center/.test(c) || !/justify-content:\s*center/.test(c) || !/position:\s*fixed/.test(c))
+        revBad.push(`${rel}${f}: 弹窗遮罩缺 flexbox 双居中或 fixed 骨架`);
+      if (!/showDirectoryPicker\(/.test(c)) revBad.push(`${rel}${f}: 缺 FSAA 主路径（showDirectoryPicker 调用）`);
+      else if (!/indexedDB/i.test(c)) revBad.push(`${rel}${f}: FSAA 句柄未持久化（缺 IndexedDB 复用）`);
+      if (!/createObjectURL/.test(c)) revBad.push(`${rel}${f}: 缺降级下载路径（Blob）`);
+      if (!/待改|阻塞/.test(c) || !/role="alert"|role='alert'/.test(c))
+        revBad.push(`${rel}${f}: 快捷标记校验缺失或错误提示无 role=alert`);
+      if (!/localStorage/.test(c)) revBad.push(`${rel}${f}: 反馈未落 localStorage`);
+      if (!/max-width:\s*(480px|100%)/.test(c)) revBad.push(`${rel}${f}: 弹窗宽度规则缺失（max-width 480/100%）`);
+    }
+  };
+  scan(join(regDir, "review"), "review/");
+}
+if (revBad.length) fail("review-mech", revBad.join(" | "));
+else ok("review-mech", "审阅机制骨架完整（居中/FSAA 双路径/标记校验/localStorage）");
 
 /* ---------- 汇总 ---------- */
 if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });
