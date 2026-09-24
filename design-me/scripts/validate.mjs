@@ -554,6 +554,34 @@ const copyBad = [];
 if (copyBad.length) fail("copy-set", copyBad.join(" | "));
 else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术语一致");
 
+/* ---------- V18 审阅导出失败可见 + 自检完整性（specs/review「降级路径」+ V6 自检反摆拍） ---------- */
+{
+  const v18Bad = [];
+  // (a) review 产物含 FSAA 时：用户取消（AbortError）必须有捕获分支——取消≠不支持，未捕获=保存静默中断
+  const rvDir = join(regDir, "review", "review-critic-round2");
+  if (existsSync(rvDir)) {
+    for (const f of readdirSync(rvDir).filter((x) => x.endsWith(".html"))) {
+      const s = readFileSync(join(rvDir, f), "utf8");
+      if (s.includes("showDirectoryPicker") && !/AbortError/.test(s))
+        v18Bad.push(`review/${f}: showDirectoryPicker 无 AbortError（用户取消）捕获分支——取消后保存中断且无提示`);
+    }
+  }
+  // (b) 自检完整性：critic-round2 起 SELF-CHECK.md 不得只有评分表（逐条核对缺位 = 自检摆拍）
+  for (const d of readdirSync(regDir)) {
+    for (const sub of ["", "review-critic-round2"]) {
+      const sc = join(regDir, d, sub, "SELF-CHECK.md");
+      if (sub && existsSync(sc)) {
+        const c = readFileSync(sc, "utf8");
+        const checks = (c.match(/✅/g) || []).length;
+        if (c.length < 800 || checks < 5)
+          v18Bad.push(`${d}/${sub}/SELF-CHECK.md: 自检仅 ${c.length} 字节/${checks} 条核对——缺逐条核对记录（自检摆拍）`);
+      }
+    }
+  }
+  if (v18Bad.length) fail("review-fsaa-selfcheck", v18Bad.join(" | "));
+  else ok("review-fsaa-selfcheck", "FSAA 用户取消分支捕获 + round2 起自检含逐条核对（非评分-only 摆拍）");
+}
+
 /* ---------- V15 术语表载体 + 弹层 a11y 特征（specs/content「单一事实来源」+ review 弹层基线，可执行化） ---------- */
 {
   const v15Bad = [];
@@ -741,6 +769,50 @@ const revBad = [];
 }
 if (revBad.length) fail("review-mech", revBad.join(" | "));
 else ok("review-mech", "审阅机制骨架完整（居中/FSAA 双路径/标记校验/localStorage）");
+
+/* ---------- V18 规范定制结构（specs/spec-customization 验收可执行化） ---------- */
+// design/regression/spec-customization/：MASTER 含基线引用+覆盖三要素（字段/新值/原因）+不覆盖节；pages 仅差异；Token 与 MASTER 主色一致
+const scBad = [];
+{
+  const sDir = join(regDir, "spec-customization");
+  if (existsSync(sDir)) {
+    const mPath = join(sDir, "MASTER.md");
+    if (existsSync(mPath)) {
+      const c = readFileSync(mPath, "utf8");
+      if (!/基线引用/.test(c)) scBad.push("MASTER.md: 缺「基线引用」节（须引用全局 spec）");
+      for (const s of ["brand", "web", "mobile"]) {
+        if (!c.includes(`specs/${s}`)) scBad.push(`MASTER.md: 基线引用缺 specs/${s}`);
+      }
+      // 覆盖行（- xxx：值（覆盖…）格式）须含「原因」相邻行
+      const covLines = [...c.matchAll(/^- ([^：]+)：([^（\n]+)（覆盖/gm)];
+      for (const m of covLines) {
+        const after = c.slice(m.index, m.index + 220);
+        if (!/原因/.test(after)) scBad.push(`MASTER.md: 覆盖「${m[1].trim()}」无原因说明`);
+      }
+      if (!/不覆盖项/.test(c)) scBad.push("MASTER.md: 缺「不覆盖项」显式声明（漏考虑 vs 有意沿用不可区分）");
+      // Token 一致性：MASTER 覆盖的主色 hex 与 tokens.json color.primary 一致
+      const priHex = (c.match(/主色：(#(?:[0-9A-Fa-f]{6}))/) || [])[1];
+      const tPath = join(sDir, "tokens.json");
+      if (priHex && existsSync(tPath)) {
+        try {
+          const tok = JSON.parse(readFileSync(tPath, "utf8"));
+          if (tok.color && tok.color.primary !== priHex)
+            scBad.push(`Token 与 spec 脱节：MASTER 主色 ${priHex} ≠ tokens.json primary ${tok.color.primary}`);
+        } catch (e) { scBad.push(`tokens.json: 非法 JSON（${e.message}）`); }
+      }
+    }
+    // pages 覆盖仅写差异：文件须含「不覆盖项」（防复述基线），且不得大段复述 MASTER 覆盖值
+    const pDir = join(sDir, "pages");
+    if (existsSync(pDir)) {
+      for (const f of readdirSync(pDir).filter((x) => x.endsWith(".md"))) {
+        const c = readFileSync(join(pDir, f), "utf8");
+        if (!/不覆盖项|沿用/.test(c)) scBad.push(`pages/${f}: 缺「不覆盖项/沿用」声明（仅差异原则）`);
+      }
+    }
+  }
+}
+if (scBad.length) fail("spec-custom", scBad.join(" | "));
+else ok("spec-custom", "规范定制结构完整（基线引用/覆盖三要素/不覆盖声明/Token 一致/pages 仅差异）");
 
 /* ---------- 汇总 ---------- */
 if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });

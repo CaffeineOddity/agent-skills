@@ -318,7 +318,7 @@ AI 读取 .md 文件后，按区块标题定位要修改的页面/区块，逐�
 - [ ] 保存为 Markdown 格式，不需要 JSON
 - [ ] 文件名遵循 `design/output/feedback/<phase>_<type>_feedback.md` 约定
 - [ ] 实现了 FSAA 主路径（`showDirectoryPicker` + IndexedDB 句柄复用 + `queryPermission` 复查），并含参考实现骨架
-- [ ] 不支持 FSAA 时降级为浏览器下载
+- [ ] 不支持 FSAA **或用户取消目录选择（AbortError）**时降级为浏览器下载——取消是必经分支，未捕获即保存中断且无提示（失败可见或安静降级，不可崩）
 - [ ] 新一轮弹窗内保留上一轮反馈原话（只读）
 - [ ] 改动页面区块有「已改动」角标
 - [ ] 页面 ID 在多轮走查中稳定
