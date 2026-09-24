@@ -115,7 +115,7 @@ error / success / warning
 - [ ] 正文对比度 ≥ 4.5:1，大字 ≥ 3:1
 - [ ] 所有交互元素有可见焦点环
 - [ ] 触控目标 ≥ 44×44px（含导航内小按钮；用扩展命中区满足时须注明）
-- [ ] 暗色模式对比度独立验证通过；**不提供暗色模式时须显式声明仅亮色（页面注释或交付说明），隐式缺失 = 不通过**
+- [ ] 暗色模式对比度独立验证通过；**不提供暗色模式时须显式声明仅亮色——首选载体：HTML `<meta name="color-scheme" content="light">`，无 HTML 产物时用页面注释或交付说明，隐式缺失 = 不通过**
 - [ ] 语义色彩 Token 已定义，无裸 hex；色彩非凭空发明（来源可论证，oklch 收敛到 2-3 有彩）
 - [ ] 无紫→粉→蓝全屏渐变 / rainbow / mesh gradient 铺满背景
 - [ ] 字体非泛用族（非 Inter/Roboto/Arial 单一方案）；display 无 Fraunces/Space Grotesk/Playfair AI 指纹

@@ -123,6 +123,11 @@ Token 须可被各端消费。一份 Token 源，多端格式导出：
 - Token 源文件为单一事实来源（如 `tokens.json`），各端格式由构建工具自动导出
 - 禁止手动在各端重复维护 Token 值（DRY）
 - 导出后各端只消费，不修改
+- **Token 文档 HTML 与源同源**：文档 `:root` CSS 变量须逐值来自 Token 源（构建导出），不得手抄漂移；Token 引用（`{语义键}` / `{基线.阶}`）必须可解析，悬空引用 = Token 体系不成立
+- **声明 webfont 的文档/产物须真实加载**（`@font-face` 内嵌或 link 引入 + 加载状态显式校验），否则回退链显式落系统字体；「声明了加载不了的 webfont」= 字体配对不成立，按实际渲染字体判定（与 `specs/web` 字体加载条款同源）
+- **交互/提示原型不得摆拍**：错误/成功等双态提示须真实可切换（输入触发/修正消失），静态常驻的假提示 = 组件预览不成立
+- **弹出式审阅层键盘可达**：打开后焦点入弹窗、Tab 圈闭、关闭归还触发元素、`aria-modal="true"`
+- **页面级 SFX 须可关**：凡页面产物带声音，须有页面内静音控件（`specs/motion` 静音条款对文档原型同样适用）
 
 **Token 文档 HTML**：Token 体系可视化为单页 HTML，供设计师与用户审阅：
 
@@ -198,9 +203,11 @@ Token 组合为可复用 UI 组件。每个组件定义：
 - [ ] 字体配对有对比来源，display 非 AI 指纹字体
 - [ ] 组件层引用语义 Token，无裸值硬编码
 - [ ] Token 源为单一文件，各端格式自动导出
+- [ ] Token 文档 HTML 的 CSS 变量与 Token 源同源（无手抄漂移），Token 引用无悬空
+- [ ] 声明 webfont 须真实加载或显式回退；文档/产物响应式无横向滚动；弹层焦点管理闭环（入/圈闭/归还）；SFX 有页面内静音控件；交互原型提示为真实双态非摆拍
 - [ ] 暗色模式每色有明/暗双映射
 - [ ] 组件清单含层级、Token 依赖、变体数、成熟度
-- [ ] 每个组件有状态变体（default/hover/focus/active/disabled）
+- [ ] 每个组件有状态变体，**按语义取子集**：交互组件（Button/Input/Modal 等）default/hover/focus/active/disabled 全查；非交互原子（Icon/Text 等）查 default/disabled，hover/active 不适用标 N/A，禁硬凑假状态
 - [ ] 动效 Token 引用 `specs/motion`，不自定义
 - [ ] 模式层文档引用组件，不复述
 - [ ] 变更遵循 SDD：先改 spec/Token 再改组件实现

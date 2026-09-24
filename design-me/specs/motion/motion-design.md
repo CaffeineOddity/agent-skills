@@ -125,6 +125,10 @@
 ### 状态变化：一个元素过渡，非两个元素 cross-fade
 
 - 同一元素跨状态用 **Shared Element / FLIP**（如按钮「膨胀」成输入框），不是两个元素交叉淡入淡出
+- **FLIP 竞态细则**：源元素自身在过渡中（页面刚返回/列表回位）时，禁止拿瞬时 `getBoundingClientRect` 算起点（运动中值→起点跳变）；改用 `offsetLeft/Top` 布局锚点（不含 transform），并按**中心差**补偿（`transform-origin` 默认 center，topleft 差带 `(源宽-落点宽)/2` 系统偏差）
+- **JS 驱动的动效须自带降级**：CSS `@media (prefers-reduced-motion)` 管不到 JS 内联 transition/animation；脚本内动效前须 `matchMedia('(prefers-reduced-motion: reduce)')` 分支直接落位
+- **结果性动效防抖**：提交/收藏等带完成态反馈的动作进行中重复触发须忽略（防按钮态卡死、toast/提示重复计时）
+- **场景焦点归还**：转场关闭后焦点归还到来源元素（如列表项），键盘用户不落到 body
 - 面板/卡片展开用「呼吸式」：前 40% 只拉 width，30% 处起撑 height，内容在壳展开完成后才浮现；勿同时拉宽高
 - 焦点切换完整配方：背景减弱（`brightness + saturate + blur(4-8px) + dim`）+ 前景锐化 + 150ms Flash；**blur 才让非焦点真的退到后景**，不只降 opacity
 - 展示「过程」而非「魔法结果」：AI 文本用 Chunk Reveal（按词/标点切块、40-120ms）、数据用数字 counter（snap 整数），反「一键魔法」
@@ -208,11 +212,14 @@ sound-duration-notify: 250ms
 
 ## 验收标准
 
+逐条打勾；**按产物形态分组判定**：A 组通用必查；B 组仅 deck/叙事场景产物适用；C 组仅含 AI 文本/数据展示的产物适用。不适用组标 `N/A（<场景>）`，禁硬勾也禁漏记。
+
+**A 组 · 通用 UI 原型必查**
 - [ ] 时长 Token 已定义（fast/normal/slow），禁超 500ms
 - [ ] 退场比入场快 60-70%
 - [ ] 缓动 Token 已定义，禁用 linear
 - [ ] 只动 transform/opacity，不动 width/height
-- [ ] 入场用 ease-out，退场用 ease-in
+- [ ] 入场用 ease-out（expoOut），退场用 ease-in
 - [ ] 列表错峰 30-50ms/项
 - [ ] 尊重 reduced-motion，降级为淡入淡出
 - [ ] 动效可中断，不阻塞输入
@@ -222,15 +229,20 @@ sound-duration-notify: 250ms
 - [ ] 结果性动作（提交/切换/成功/错误/弹窗）有对应 UI 声音，且与动效时长配对
 - [ ] 高频交互（hover）不加音，只有结果性动作出声
 - [ ] 声音短促一次性，非循环 BGM
-- [ ] 提供静音开关，尊重系统静音/减弱设置
-- [ ] 主 easing = expoOut 语义，非 easeOut / linear
-- [ ] page load 由单条 paused timeline orchestrated，含 30ms stagger
+- [ ] 提供静音开关（页面内可操作控件），尊重系统静音/减弱设置
+- [ ] page load 由单条 timeline orchestrated（无框架等价写法适用），含 30-50ms stagger
 - [ ] 场景切换 autoAlpha 交叠，无 >0.3s 空白；非 PowerPoint 逐屏硬切
-- [ ] hero/锚点元素跨片段持续；状态变化用 Shared Element，非两元素 cross-fade
-- [ ] 焦点切换含 blur（不只 opacity）；AI 文字非逐字蹦、数字非匀速 setInterval
-- [ ] SFX 密度符合性格（发布 6-9 vs 工具 0-3 /10s），一处素材库全站统一
 - [ ] 音频解锁：AudioContext 在首次用户交互后解锁，解锁前静默跳过；音源缺失/播放失败静默兜底不产生 JS 报错
-- [ ] 进阶细则速查行见 `specs/motion/motion-audio-rules.md`
+- [ ] SFX 密度符合性格（发布 6-9 vs 工具 0-3 /10s），一处素材库全站统一
+
+**B 组 · deck/叙事场景适用**
+- [ ] hero/锚点元素跨片段持续
+- [ ] 焦点切换含 blur（不只 opacity）
+- [ ] 关键结果戛然而止 + hold 末帧，长段节奏三层（微 0.1-0.3 / UI 0.3-0.8 / 叙事 2-10s）
+
+**C 组 · AI 文本/数据展示适用**
+- [ ] 状态变化用 Shared Element，非两元素 cross-fade（通用 UI 中涉及时也查）
+- [ ] AI 文字非逐字蹦（Chunk Reveal 40-120ms）、数字非匀速 setInterval（counter snap）
 
 ## 边界与不做项
 
