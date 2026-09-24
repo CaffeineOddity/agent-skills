@@ -692,7 +692,8 @@ def _cli() -> None:
     # 图像生成
     p_img = sub.add_parser("image", help="生成图像")
     p_img.add_argument("--model", required=True, help="图像模型名")
-    p_img.add_argument("--prompt", required=True, help="生成提示词")
+    p_img.add_argument("--prompt", default="", help="生成提示词")
+    p_img.add_argument("--prompt-file", default="", help="从文件读取提示词（与 --prompt 二选一）")
     p_img.add_argument("--size", default="1:1", help="比例，如 16:9、1:1")
     p_img.add_argument("--resolution", default="1k", help="分辨率：1k/2k/4k")
     p_img.add_argument("--n", type=int, default=1, help="生成数量")
@@ -705,7 +706,8 @@ def _cli() -> None:
     # 视频生成
     p_vid = sub.add_parser("video", help="生成视频")
     p_vid.add_argument("--model", required=True, help="视频模型名")
-    p_vid.add_argument("--prompt", required=True, help="生成提示词")
+    p_vid.add_argument("--prompt", default="", help="生成提示词")
+    p_vid.add_argument("--prompt-file", default="", help="从文件读取提示词（与 --prompt 二选一）")
     p_vid.add_argument("--duration", type=int, default=0, help="视频时长秒数")
     p_vid.add_argument("--aspect-ratio", default="", help="比例，如 16:9、9:16")
     p_vid.add_argument("--ref", action="append", help="参考图 URL（可多次）")
@@ -743,7 +745,7 @@ def _cli() -> None:
     if args.command == "image":
         params = ImageGenParams(
             model=args.model,
-            prompt=args.prompt,
+            prompt=_resolve_prompt(args),
             size=args.size,
             resolution=args.resolution,
             n=args.n,
@@ -765,7 +767,7 @@ def _cli() -> None:
     if args.command == "video":
         params = VideoGenParams(
             model=args.model,
-            prompt=args.prompt,
+            prompt=_resolve_prompt(args),
             duration=args.duration,
             aspect_ratio=args.aspect_ratio,
             image_urls=args.ref or [],

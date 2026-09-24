@@ -568,13 +568,18 @@ else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术
   }
   // (b) 自检完整性：critic-round2 起 SELF-CHECK.md 不得只有评分表（逐条核对缺位 = 自检摆拍）
   for (const d of readdirSync(regDir)) {
-    for (const sub of ["", "review-critic-round2"]) {
-      const sc = join(regDir, d, sub, "SELF-CHECK.md");
-      if (sub && existsSync(sc)) {
+    const dd = join(regDir, d);
+    let dt;
+    try { dt = readdirSync(dd, { withFileTypes: true }); } catch { continue; }
+    if (!dt.some(x => x.isDirectory())) continue;
+    const subs = ["", ...readdirSync(dd, { withFileTypes: true }).filter(x => x.isDirectory()).map(x => x.name)];
+    for (const sub of subs) {
+      const sc = join(dd, sub, "SELF-CHECK.md");
+      if (existsSync(sc)) {
         const c = readFileSync(sc, "utf8");
         const checks = (c.match(/✅/g) || []).length;
         if (c.length < 800 || checks < 5)
-          v18Bad.push(`${d}/${sub}/SELF-CHECK.md: 自检仅 ${c.length} 字节/${checks} 条核对——缺逐条核对记录（自检摆拍）`);
+          v18Bad.push(`${d}${sub ? "/" + sub : ""}/SELF-CHECK.md: 自检仅 ${c.length} 字节/${checks} 条核对——缺逐条核对记录（自检摆拍）`);
       }
     }
   }
@@ -656,6 +661,25 @@ const resBad = [];
 }
 if (resBad.length) fail("research-summary", resBad.join(" | "));
 else ok("research-summary", "研究摘要结构完整（6 部分/模式 ≥5 含场景/moodboard 6 维/建议有依据）");
+
+/* ---------- V19 toapis Prompt 模型输入纯净 + 展示环境（specs/image-prompt「Prompt 即模型输入」可执行化） ---------- */
+{
+  const v19Bad = [];
+  const ipDirs = [join(regDir, "image-prompt", "image-prompt-critic-round2")].filter(existsSync);
+  for (const d of ipDirs) {
+    for (const f of readdirSync(d).filter((x) => x.endsWith("_prompt.md"))) {
+      const c = readFileSync(join(d, f), "utf8");
+      // (a) 元信息混入模型输入：流程/回归说明（「不实际调用」「回归」「自测注记」）不得出现在 Prompt 正文
+      if (/不实际调用|回归产物|回归注记|仅供审阅/.test(c))
+        v19Bad.push(`image-prompt/${f}: 流程/回归元信息混入 Prompt 正文——本文件全文即模型输入（--prompt-file），元信息须移 SELF-CHECK`);
+      // (b) 展示环境声明：浅/暗色用途未声明 → 浅色底图压暗色空状态等错配风险
+      if (!/展示环境|浅色模式|暗色模式|dark mode/i.test(c))
+        v19Bad.push(`image-prompt/${f}: 缺展示环境声明（浅/暗色用途；spec「生成前声明展示环境」）`);
+    }
+  }
+  if (v19Bad.length) fail("prompt-purity", v19Bad.join(" | "));
+  else ok("prompt-purity", "Prompt 正文无元信息混入（--prompt-file 纯输入）+ 展示环境已声明");
+}
 
 /* ---------- V16 研究三层真实覆盖 + 关键词锚定（specs/research R2「间接竞品 1 个」+ R6 关键词可操作化） ---------- */
 {
