@@ -327,6 +327,69 @@ let v10Count = 0;
 if (v10Bad.length) fail("icon-set", v10Bad.join(" | "));
 else ok("icon-set", `图标/插画集结构一致性（${v10Count} 枚 SVG：画布/线宽/圆角/currentColor/命名）`);
 
+/* ---------- V11 移动端可交互真实性（specs/mobile M3「可交互」可执行化） ---------- */
+// mobile*/ cafero-*.html（含 critic-round2）：onclick/事件声明的函数必须在 <script> 内有定义，禁「注释说有 toast/确认但代码无实现」
+const v11Bad = [];
+{
+  const mDir = join(regDir, "mobile");
+  if (existsSync(mDir)) {
+    for (const sub of ["", "/mobile-critic-round2"]) {
+      const d = join(mDir, sub);
+      if (!existsSync(d)) continue;
+      for (const f of readdirSync(d).filter((x) => x.endsWith(".html"))) {
+        const c = readFileSync(join(d, f), "utf8");
+        // 收集 HTML 属性里的函数调用
+        const called = new Set();
+        for (const m of c.matchAll(/on(?:click|change|input|submit)="([a-zA-Z_$][\w$]*)\(/g)) called.add(m[1]);
+        const script = c.slice(c.lastIndexOf("<script>"));
+        for (const fn of called) {
+          const defined = new RegExp(`function\\s+${fn}\\b`).test(script);
+          if (!defined) v11Bad.push(`${sub || "."}/${f}: ${fn}() 被 onclick 引用但未定义（死交互）`);
+        }
+        // 声明性文案核对：代码注释/文案提到「toast 占位」但无 toast 实现元素 → 摆拍
+        if (/toast/i.test(c) && !/(id="toast"|role="status")/.test(c)) v11Bad.push(`${sub || "."}/${f}: 提到 toast 但无 toast 载体`);
+      }
+    }
+  }
+}
+if (v11Bad.length) fail("mobile-interaction", v11Bad.join(" | "));
+else ok("mobile-interaction", "mobile 页面 onclick 函数均有实现、toast 文案有真实载体");
+
+/* ---------- V11 封面标题对比度（specs/cover C4「公式复核不目测」可执行化） ---------- */
+// design/regression/cover/*-matrix.html 存在时：提取 .cv 区块内文字色/背景色 hex（含提亮映射），WCAG 比值 ≥4.5
+const coverBad = [];
+{
+  const cDir = join(regDir, "cover");
+  if (existsSync(cDir)) {
+    const lum = (hex) => {
+      const n = hex.replace("#", "");
+      const [r, g, b] = [0, 2, 4].map((i) => parseInt(n.slice(i, i + 2), 16) / 255)
+        .map((v) => (v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)));
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    };
+    const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+    for (const f of readdirSync(cDir).filter((f) => f.endsWith("-matrix.html"))) {
+      const s = readFileSync(join(cDir, f), "utf8");
+      const bg = (s.match(/\.cv\s*{[^}]*background:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+      // 标题主色：.cv h3 前最近的颜色声明；强调色：h3 em 的 color（含 var 兜底值）
+      const h3Block = (s.match(/\.cv h3\s*{[^}]*}/) || [""])[0];
+      const fg = (s.match(/\.cv\s*{[^}]*color:\s*(#[0-9a-fA-F]{6})/) || [])[1];
+      if (bg && fg) {
+        const r = ratio(fg, bg);
+        if (r < 4.5) coverBad.push(`${f}: 标题 ${fg} on ${bg} = ${r.toFixed(2)}:1 < 4.5`);
+      }
+      const emBlock = (s.match(/\.cv h3 em\s*{[^}]*}/) || [""])[0];
+      const emM = emBlock.match(/#([0-9a-fA-F]{6})/);
+      if (bg && emM) {
+        const r = ratio("#" + emM[1], bg);
+        if (r < 4.5) coverBad.push(`${f}: 强调色 #${emM[1]} on ${bg} = ${r.toFixed(2)}:1 < 4.5（低饱和强调色须逐一验）`);
+      }
+    }
+  }
+}
+if (coverBad.length) fail("cover-contrast", coverBad.join(" | "));
+else ok("cover-contrast", "封面标题/强调色 on 背景对比度 ≥4.5:1（公式实算）");
+
 /* ---------- 汇总 ---------- */
 if (failed) exit(1, { ...out, checks: { huashu: 0, specs_root: 0, route: 0, structure: 0, refs: 0, self_check: 0, brand_diff: 0, icon_set: 0 } });
 else { out.report.push(`\n全部通过（${specMds.length} 个 spec，8 项校验）`); exit(0, out); }
