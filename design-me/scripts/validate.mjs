@@ -662,6 +662,40 @@ const resBad = [];
 if (resBad.length) fail("research-summary", resBad.join(" | "));
 else ok("research-summary", "研究摘要结构完整（6 部分/模式 ≥5 含场景/moodboard 6 维/建议有依据）");
 
+/* ---------- V20 规范定制基线一致性（specs/spec-customization「沿用=逐值一致」可执行化） ---------- */
+{
+  const v20Bad = [];
+  const scDir = join(regDir, "spec-customization", "spec-customization-critic-round2");
+  if (existsSync(scDir)) {
+    const master = readFileSync(join(scDir, "MASTER.md"), "utf8");
+    // (a) 基线引用路径须真实存在（相对 design/ 解析），断链=检索优先级链根基断裂
+    for (const m of master.matchAll(/`([^`]*specs\/[^`]+)`/g)) {
+      const rel = m[1].split("（")[0].trim();
+      if (!/^(design-me\/|design\/)/.test(rel)) continue; // 仅校验显式相对 design/ 的路径，简写/通配/叙述不查
+      if (!existsSync(resolve(root, "..", rel)))
+        v20Bad.push(`spec-customization/MASTER.md: 基线引用断链「${rel}」（相对 design/ 不存在）`);
+    }
+    // (b) 「沿用基线（不覆盖）」的 Token 组须与基线逐值一致：radius 刻度 ⊆ 基线刻度；motion duration = 基线值
+    const proj = JSON.parse(readFileSync(join(scDir, "tokens.json"), "utf8"));
+    const base = JSON.parse(readFileSync(join(regDir, "design-system", "tokens.json"), "utf8"));
+    const baseScale = base.baseline.radius.scale;
+    const mNote = base.baseline.motion.note || "";
+    if (master.includes("圆角与阴影（沿用基线")) {
+      for (const [k, v] of Object.entries(proj.radius || {}))
+        if (!baseScale.includes(v)) v20Bad.push(`spec-customization/tokens.json: radius.${k}=${v} 不在基线刻度 [${baseScale}]——声明「沿用」却值自拟（隐性覆盖）`);
+    }
+    if (master.includes("动效（沿用基线")) {
+      for (const [k, v] of Object.entries(proj.motion || {})) {
+        const ms = parseInt(v);
+        if (/duration/.test(k) && mNote && !mNote.includes(String(ms)))
+          v20Bad.push(`spec-customization/tokens.json: motion.${k}=${v} 与基线 note「${mNote}」不符——隐性覆盖`);
+      }
+    }
+  }
+  if (v20Bad.length) fail("custom-baseline", v20Bad.join(" | "));
+  else ok("custom-baseline", "基线引用路径全存在 + 「沿用」Token 与基线逐值一致（radius 刻度/motion 时长）");
+}
+
 /* ---------- V19 toapis Prompt 模型输入纯净 + 展示环境（specs/image-prompt「Prompt 即模型输入」可执行化） ---------- */
 {
   const v19Bad = [];
