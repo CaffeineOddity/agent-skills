@@ -662,6 +662,30 @@ const resBad = [];
 if (resBad.length) fail("research-summary", resBad.join(" | "));
 else ok("research-summary", "研究摘要结构完整（6 部分/模式 ≥5 含场景/moodboard 6 维/建议有依据）");
 
+/* ---------- V21 交付包边界声明与实现一致（specs/handoff「边界条件已注明」可执行化） ---------- */
+{
+  const v21Bad = [];
+  const hdDirs = [join(regDir, "handoff", "handoff-critic-round2")].filter(existsSync);
+  for (const d of hdDirs) {
+    for (const f of readdirSync(d).filter((x) => x.endsWith(".html"))) {
+      const s = readFileSync(join(d, f), "utf8");
+      // 边界条件表声明的响应式断点须有 @media 实现锚点——交付标注写了行为而无实现，照标注还原则与实际组件不符
+      for (const m of s.matchAll(/(?:<|≤|&lt;)\s*(\d{3,4})px[^<]*：[^<]*(?:独占|置于|堆叠)|@(?:min|max)-width:\s*(\d{3,4})px/g)) {
+        const bp = m[1] || m[2];
+        if (m[1] && !new RegExp(`@media[^{]*\\d{3,4}px`).test(s))
+          v21Bad.push(`handoff/${f}: 边界表声明 <${bp}px 响应式行为但无 @media 实现——声明与实现脱节`);
+      }
+      // 精确配对：每个声明的断点值须出现对应 @media
+      const declared = [...s.matchAll(/(?:&lt;|<)\s*(480|1280|768)px/g)].map((m) => m[1]);
+      for (const bp of declared)
+        if (!s.includes(`@media`) || !new RegExp(`@media[^{]*${bp}px`).test(s))
+          v21Bad.push(`handoff/${f}: 边界表声明 ${bp}px 断点行为但无对应 @media——照标注还原将与实际组件不符`);
+    }
+  }
+  if (v21Bad.length) fail("handoff-breakpoint", v21Bad.join(" | "));
+  else ok("handoff-breakpoint", "边界表声明的响应式断点均有 @media 实现锚点（声明=实现）");
+}
+
 /* ---------- V20 规范定制基线一致性（specs/spec-customization「沿用=逐值一致」可执行化） ---------- */
 {
   const v20Bad = [];
