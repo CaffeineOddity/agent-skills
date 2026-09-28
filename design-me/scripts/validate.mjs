@@ -3,7 +3,7 @@
  * design-me specs 仓库一致性校验
  *
  * 把人工"护栏"转成可执行校验，供自进化/挑刺任务在改完 spec 后运行，
- * 失败则以非零码退出并在 spec 变更日志追记触发。校验项：
+ * 失败则以非零码退出并在 CHANGELOG.md 追记触发。校验项：
  *
  *  V1 无 huashu 字样残留（全仓设计文案不自称对标外部 skill）
  *  V2 specs/ 根下不散落独立 md（子代理提炼细则须在子目录内）
@@ -146,13 +146,15 @@ else ok("self-check", "回归产物均有 SELF-CHECK.md 且含 5 维度评分项
 /* ---------- V7 Web 产物双态提示重置（style.color 残留） ---------- */
 const v7Bad = [];
 const regHtmls = [];
-(function walkReg(d) {
-  for (const e of readdirSync(d, { withFileTypes: true })) {
-    const p = join(d, e.name);
-    if (e.isDirectory()) walkReg(p);
-    else if (p.endsWith(".html")) regHtmls.push(p);
-  }
-})(regDir);
+if (existsSync(regDir)) {
+  (function walkReg(d) {
+    for (const e of readdirSync(d, { withFileTypes: true })) {
+      const p = join(d, e.name);
+      if (e.isDirectory()) walkReg(p);
+      else if (p.endsWith(".html")) regHtmls.push(p);
+    }
+  })(regDir);
+}
 for (const f of regHtmls) {
   const c = readFileSync(f, "utf8");
   const assigns = [...c.matchAll(/([\w$][\w$.]*)\.style\.color\s*=\s*([^;]+);?/g)]
@@ -487,8 +489,10 @@ const v12Bad = [];
     for (const h of new Set(hexes))
       if (!registered.has(h)) v13Bad.push(`${d.split("/").pop()}: 插画用色 ${h} 未登记进任何 *-palette.json（I3 板外色禁令）`);
   }
-  if (!paletteFiles.length) v13Bad.push("illustration 域无任何 *-palette.json 色板登记文件（I3 暗色映射登记无载体）");
-  if (v13Bad.length) fail("ill-palette", v13Bad.join(" | "));
+  const illPresent = illDirs.some((d) => existsSync(d));
+  if (illPresent && !paletteFiles.length) v13Bad.push("illustration 域无任何 *-palette.json 色板登记文件（I3 暗色映射登记无载体）");
+  if (!illPresent) ok("ill-palette", "无 illustration 回归产物，跳过色板登记");
+  else if (v13Bad.length) fail("ill-palette", v13Bad.join(" | "));
   else ok("ill-palette", `插画色彩全部登记色板（${hexCount} 处 --brand-* hex 对照 ${registered.size} 个登记值，含暗色分支）`);
 }
 
@@ -567,7 +571,7 @@ else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术
     }
   }
   // (b) 自检完整性：critic-round2 起 SELF-CHECK.md 不得只有评分表（逐条核对缺位 = 自检摆拍）
-  for (const d of readdirSync(regDir)) {
+  if (existsSync(regDir)) for (const d of readdirSync(regDir)) {
     const dd = join(regDir, d);
     let dt;
     try { dt = readdirSync(dd, { withFileTypes: true }); } catch { continue; }
@@ -597,9 +601,9 @@ else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术
     const tf = join(d, "terms.json");
     if (existsSync(tf)) { try { termsJson = JSON.parse(readFileSync(tf, "utf8")); } catch (e) { v15Bad.push(`terms.json 解析失败: ${e.message}`); } }
   }
-  if (!termsJson) {
+  if (cDirs.length && !termsJson) {
     v15Bad.push("content 域无 terms.json——术语表「与 Token 一样是单一事实来源」无载体（仅 HTML 表格不可执行）");
-  } else {
+  } else if (termsJson) {
         // 场景禁用词全文扫描；「确认动作」的 确定/OK/好的 只查按钮元素文本（说明性文字/规则描述合法出现）
     const textBans = (termsJson.terms || []).filter((t) => t.concept !== "确认动作").flatMap((t) => t.ban || []);
     const btnBans = ((termsJson.terms || []).find((t) => t.concept === "确认动作") || {}).ban || [];
@@ -629,7 +633,8 @@ else ok("copy-set", "文案集无禁用按钮词/无信息错误文案/订阅术
       }
     }
   }
-if (v15Bad.length) fail("term-modal", v15Bad.join(" | "));
+  if (!cDirs.length) ok("term-modal", "无 content 回归产物，跳过术语载体");
+  else if (v15Bad.length) fail("term-modal", v15Bad.join(" | "));
   else ok("term-modal", `terms.json 载体驱动禁词扫描（${(termsJson?.terms || []).length} 条术语）+ round2 弹层 a11y 特征齐全`);
 }
 

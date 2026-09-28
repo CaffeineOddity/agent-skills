@@ -44,8 +44,8 @@ error / success / warning
 - 主色 + 锐利辅色 > 均匀分布的怯弱色板
 - **色彩三步法**（详见 `specs/workflow/hi-fi-acceptance-checklist.md`）：采样（品牌资产/真实内容/VI 吸色）→ 收敛（用 `oklch()` 压到 2-3 个有彩色 + 1 组中性明度序列，有彩色之间色相角 H≥60° 或明度差 L≥0.3）→ 论证（写一句「为什么是这个色」，写不出 = 在抄配方）
 - **不凭空发明色**：先吸已有品牌/真实资产/内容真图的色值，缺的 token 用 oklch 插值；无任何参考才选 known 配色系统（Radix / Tailwind 默认 / 某品牌色），不凭记忆自调
-- **印刷式低饱和**：大面积底色 chroma 0.01-0.04、主色/强调 0.08-0.15、小面积点睛 0.15-0.22（屏幕荧光感来自 >0.25 满版铺）
-- **主色 + 单个锐利 accent 贯穿全场**：accent 属小面积点睛，保留足够 chroma 才有力；不要满版多色
+- **饱和度与面积比以 `design/output/direction.md` 为准**（规则见 SKILL.md「设计与审美双闸门」）。本文件不设全站 chroma 区间
+- **主色 + 一个 accent 贯穿全场**：两者的面积和力度跟参考，不另定深浅
 - 暗色模式：用降饱和的浅色变体，不是直接反色；**不得简单 invert**，需重调饱和度/对比度/accent；不想做就别做
 - **禁紫色→粉色→蓝色全屏渐变、任意 rainbow/mesh gradient 铺满背景**（品牌自用除外）
 - 功能色（错误红/成功绿）必须配图标或文字，不能仅靠颜色传达含义
@@ -56,7 +56,7 @@ error / success / warning
 - 正文字号移动端 ≥ 16px（避免 iOS 自动放大）
 - 行高正文 1.5-1.75，标题 1.1-1.3
 - 行宽：移动端 35-60 字符，桌面 60-75 字符；中文一行 22-38 字（最佳 28-32，`max-width: 36em`）、西文最佳 66（`max-width: 65ch`）
-- 字体配对：一个有性格的展示字体 + 一个可读性强的正文字体；禁用 Inter/Roboto/Arial 作为唯一字体；**display 禁 Fraunces/Space Grotesk/Playfair（AI 指纹）**，换 Newsreader、Schibsted Grotesk、Cormorant 等平替
+- 字体配对：一个有性格的展示字体 + 一个可读性强的正文字体；禁用 Inter/Roboto/Arial 作为唯一字体。字族从 `direction.md` 的参考里取，本文件不指定平替名单
 - **配对须有对比来源**（形式/同族咬合/时代对比）：衬线 display + 无衬线 body、Mono display + sans body、Heavy + light
 - **中文字体**：正文只宋/黑/楷，一页最多 2 个中文字体家族；中文禁用 italic（无斜体传统，faux italic 变形丑），用字重/楷体/荧光笔底色/着重号强调，`font-synthesis: none` 禁合成；标点用直角引号「」，`line-break: strict` 避头尾；fallback 链「西文在前、中文在中、系统中文兜底、泛型收尾」
 - **字距**：中文正文 0-0.05em、标题 0、display 巨字 -0.02em~0，绝不套西文负字距
@@ -70,13 +70,13 @@ error / success / warning
 - z-index 分层：0 / 10 / 20 / 40 / 100 / 1000
 - 桌面 max-width 一致（如 max-w-6xl / 7xl）
 - 用大小、间距、对比建立层级，不只用颜色
-- 不对称、重叠、对角流、留白或可控密度--选一个明确的构图方向
+- 构图（主体位置与留白）按 `direction.md` 里从参考抽出的那一项
 - **留白是构图不是缺席**：留白必须服务于明确的视觉锚点/黄金位置，不是「页面渲染坏了」；空白用构图解决，不靠内容填满
 - **反填充**：每个元素必须 earn its place，无真数据就留诚实 placeholder；**面向用户的未定数据用可见灰字标注「数据待补：xx」**（如折扣细则、统计数），不可藏在注释里假装已完成
 - **禁圆角卡片 + 左 border accent 色组合**（`border-radius:12px + border-left:4px solid #色`），强调用背景对比/字重字号对比/plain 分割线/干脆不分卡片
 - **禁装饰性 emoji 作图标**（🚀⚡✨🎯、feature 列表 ✅、CTA emoji 箭头），用图标系统（`specs/icon-system`）或 placeholder
 - **禁 SVG 手画人物/设备/场景代替真实产品图**：品牌识别度归零；缺图放 placeholder 等用户给，不自己造
-- **一个签名细节做到 120%，其它做到 80%**：页面留一处「值得截图」的质感（极淡底纹 / serif 斜体引语 / 背景波形），不要到处平均用力
+- **签名**：全页只留一处，规则见 SKILL.md 双闸门（能指认来自本产品的哪一个名词，指认不出就删）
 - 线宽克制：hairline 0.5-1px，一处背景色 + 一个 accent 贯穿全场
 - **text-wrap: balance（标题 ≤4 行）+ pretty（正文）**；CSS Grid（含 named areas / subgrid）优先
 
@@ -118,7 +118,7 @@ error / success / warning
 - [ ] 暗色模式对比度独立验证通过；**不提供暗色模式时须显式声明仅亮色——首选载体：HTML `<meta name="color-scheme" content="light">`，无 HTML 产物时用页面注释或交付说明，隐式缺失 = 不通过**
 - [ ] 语义色彩 Token 已定义，无裸 hex；色彩非凭空发明（来源可论证，oklch 收敛到 2-3 有彩）
 - [ ] 无紫→粉→蓝全屏渐变 / rainbow / mesh gradient 铺满背景
-- [ ] 字体非泛用族（非 Inter/Roboto/Arial 单一方案）；display 无 Fraunces/Space Grotesk/Playfair AI 指纹
+- [ ] 字体非泛用族（非 Inter/Roboto/Arial 单一方案）；展示字体与正文字体能指认到 `direction.md` 里的参考
 - [ ] 中文正文用直角引号「」、无 faux italic、fallback 链西文在前
 - [ ] 数据列用 tabular-nums
 - [ ] 无圆角卡片+左 border accent 滥堆、无装饰 emoji 当图标、无 SVG 手画伪产品图

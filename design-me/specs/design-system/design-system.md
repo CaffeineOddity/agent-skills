@@ -52,14 +52,14 @@
 - 组件层引用语义层，禁止直接引用基线层
 - 每色须有明/暗双色映射
 - **色彩非凭空发明**：基线色板先从品牌资产/真实素材/用户 VI 采样（详见 `specs/workflow/hi-fi-acceptance-checklist.md`），缺的色阶用 `oklch()` 插值；无参考才选 known 配色系统，不凭记忆自调
-- **印刷式低饱和分层**：大面积底色 chroma 0.01-0.04、主色 0.08-0.15、小面积点睛 0.15-0.22；禁紫→粉→蓝满版渐变
+- **饱和度跟 `design/output/direction.md` 走**（规则见 SKILL.md 双闸门）。本文件把参考里的大面积色与点睛色写成 Token，不设全站 chroma 区间。禁紫→粉→蓝满版渐变
 
 #### 字体 Token
 
 ```
-font-family-display: "Poppins"
-font-family-body: "Inter"
-font-family-label: "Inter Medium"
+font-family-display: "<direction.md 的展示字体>"
+font-family-body: "<direction.md 的正文字体>"
+font-family-label: "<direction.md 的标签字体>"
 
 font-size-sm: 12px / 14px / 16px / 18px / 24px / 32px / 48px
 font-weight-regular: 400
@@ -74,7 +74,7 @@ line-height-relaxed: 1.75
 - 字族从 `specs/brand` 的字体层级映射
 - 字号阶梯用语义名（sm/md/lg/xl/2xl），不用数字
 - 行高按用途命名（tight/normal/relaxed），不按数值
-- **字体配对须有对比来源**（衬线 display + 无衬线 body / Mono display + sans / Heavy + light）；display 禁 Fraunces/Space Grotesk/Playfair AI 指纹（平替见 `specs/workflow/hi-fi-acceptance-checklist.md`）；禁 Inter/Roboto/Arial 作为唯一字体
+- **字体配对须有对比来源**（衬线 display + 无衬线 body、Mono display + sans、Heavy + light，都是可选对比，不是菜单）。字族跟 `direction.md` 的参考走；禁 Inter/Roboto/Arial 作为唯一字体
 - **中文字体**：正文只宋/黑/楷，一页最多 2 个中文字体家族；禁 faux italic（`font-synthesis: none`）；fallback 链「西文在前、中文在中、系统中文兜底」；直角引号「」、`line-break: strict`
 
 #### 间距 Token
@@ -199,8 +199,8 @@ Token 组合为可复用 UI 组件。每个组件定义：
 
 - [ ] Token 三层命名（基线 -> 语义 -> 组件）已定义
 - [ ] 基线色板来源可指认（品牌资产采样 / oklch 插值 / known 配色系统，非凭记忆自调）
-- [ ] 色彩 chroma 分层合规：大面积底色 0.01-0.04、主色 0.08-0.15、点睛 0.15-0.22
-- [ ] 字体配对有对比来源，display 非 AI 指纹字体
+- [ ] 色与字能指认到 `direction.md` 的参考；本 spec 不设全站 chroma 区间或平替字表
+- [ ] 字体配对有对比来源，非 Inter/Roboto/Arial 单一方案
 - [ ] 组件层引用语义 Token，无裸值硬编码
 - [ ] Token 源为单一文件，各端格式自动导出
 - [ ] Token 文档 HTML 的 CSS 变量与 Token 源同源（无手抄漂移），Token 引用无悬空
